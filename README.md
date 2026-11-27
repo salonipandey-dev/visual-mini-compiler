@@ -2,10 +2,11 @@
 
 A React + TypeScript browser workbench for a Compiler Design course.
 
-**Checkpoint 2:** lexical analysis and recursive-descent parsing are implemented.
-Compile a small integer-language program and inspect its tokens and real AST.
-Semantic checks, intermediate instructions, and execution are later checkpoints;
-a successful parse does not establish that variables are declared or produce printed output.
+**Checkpoint 3:** lexical analysis, recursive-descent parsing, and semantic analysis
+are implemented. Compile a small integer-language program and inspect its tokens,
+its real AST, and its symbol table. Execution and intermediate code are later
+checkpoints: a successful compilation means the program was checked, not run,
+so no printed output or variable values are shown.
 
 ## Run
 
@@ -20,7 +21,7 @@ Open the local address printed by Vite, usually http://localhost:5173.
 
 | Command | Purpose |
 | --- | --- |
-| npm test | Run compiler and AST-rendering tests once |
+| npm test | Run compiler, AST and symbol-table rendering tests once |
 | npm run test:watch | Re-run tests while editing |
 | npm run typecheck | Check TypeScript types |
 | npm run test:e2e | Run the Chromium workbench smoke tests |
@@ -42,8 +43,12 @@ print marks + bonus;
 
 The lexer recognizes let/print, ASCII identifiers, decimal integer literals,
 + - * =, parentheses, and semicolons. Comments begin with #. Unary minus and
-parentheses are supported. Variables are declared once using let; checks for
-undeclared names and duplicate declarations belong to the upcoming semantic phase.
+parentheses are supported.
+
+Semantic rules: one global scope, case-sensitive names, every variable declared
+once with let, and declared before it is used. A declaration's initializer is
+checked before its name exists, so let total = total + 1; is an error.
+The Semantic tab lists each variable's name, type (integer), and declaration position.
 
 Precedence: unary minus, then multiplication, then addition/subtraction.
 Binary operations associate to the left. print(7); is a print statement with
@@ -53,8 +58,9 @@ The earlier assumed C-like vocabulary has been replaced by the documented .mcl
 language. Floats, booleans, conditions, loops, division, reassignment, and C-style
 comments are outside version 1.
 
-See [language specification](docs/language-spec.md) and
-[parser walkthrough](docs/parser-walkthrough.md).
+See the [language specification](docs/language-spec.md), the
+[parser walkthrough](docs/parser-walkthrough.md), and the
+[semantic analysis walkthrough](docs/semantic-walkthrough.md).
 
 ## Structure
 
@@ -65,11 +71,13 @@ See [language specification](docs/language-spec.md) and
 | src/compiler/lexer.ts | Source to tokens and lexical diagnostics |
 | src/compiler/ast.ts | Typed AST records and source spans |
 | src/compiler/parser.ts | Recursive-descent grammar and depth checks |
+| src/compiler/semantic.ts | AST walk, Map-based symbol table, name checks |
 | src/compiler/pipeline.ts | Ordered phases; later phases skip after failure |
 | src/compiler/diagnostics.ts | Shared diagnostic representation |
-| src/ui/ | Editor, token table, AST tree, phase tabs, problems |
+| src/ui/ | Editor, token table, AST tree, symbol table, phase tabs, problems |
 | src/examples/ | Valid and invalid source examples |
-| tests/ | Language, parser, pipeline, and rendering tests |
+| tests/ | Lexer, parser, semantic, pipeline, and rendering tests |
+| tests/browser/ | Chromium workbench tests (Playwright) |
 
 The compiler core imports neither React nor the DOM. The workbench uses the
 existing mocha palette. Source edits invalidate the previous results by revision,
@@ -89,13 +97,16 @@ navigation/highlights are disabled.
 
 Lexing stops at its first error. Parsing runs only after successful tokenization.
 The parser reports the first syntax failure with expected/found details.
+Semantic analysis runs only on a complete AST and reports its first error;
+the declarations accepted before it are shown as a partial symbol table.
 The AST includes grouping nodes for display, while preserving the exact identifier
 and operator positions. Grouping does not add to operator depth.
 
 ## Data and verification
 
 Source and results live in browser memory. Refreshing restores the default example;
-no source is sent to a server or persisted. No program execution is implemented yet.
+no source is sent to a server or persisted. No program execution is implemented yet,
+so the symbol table never shows runtime values.
 
 GitHub Actions runs the test suite, TypeScript/production build, and Chromium
 workbench smoke tests on pull requests and pushes to main. Test outcomes are reported by CI; this README does not

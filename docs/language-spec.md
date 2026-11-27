@@ -51,11 +51,12 @@ Repeated unary minus is legal; unary plus and implicit multiplication are unsupp
 ## Meaning
 
 A declaration introduces a name after checking its initializer, in one global scope.
-Names may be declared once. There is no reassignment. These semantic checks are
-specified here but are not implemented in checkpoint 2.
+Names may be declared once. There is no reassignment. Every name used in an
+expression must be declared by an earlier let statement. The only type is integer.
+Semantic analysis (checkpoint 3) enforces these rules and builds the symbol table.
 
 print evaluates an integer expression and appends a newline when the later runner
-is implemented. The current checkpoint constructs an AST without executing it.
+is implemented. The current checkpoint checks the AST without executing it.
 
 | Expression | Required grouping | Future execution result |
 | --- | --- | --- |
@@ -96,8 +97,14 @@ not run after an input/lexical error. Syntax failure keeps completed tokens,
 reports the expected/found source position, and skips semantic analysis.
 
 For example, print missing; parses successfully because it has valid structure.
-Only the later semantic checker can reject the unavailable name. The workbench
-must label that phase as not built rather than report a full successful compilation.
+The semantic checker then rejects the unavailable name.
+
+Semantic analysis runs only on a complete AST. It reports the first semantic error
+in source order and stops; declarations accepted before that error form a partial
+symbol table. Within let name = initializer;, the name is checked for duplication
+first (it appears first), then the initializer, and only then is the name declared.
+Undeclared-name diagnostics point at the identifier; duplicate-declaration
+diagnostics point at the second declaration's name.
 
 Every parse consumes the complete token stream and creates a new AST. AST nodes
 and their child statement arrays are frozen; there is no shared mutable parser state.

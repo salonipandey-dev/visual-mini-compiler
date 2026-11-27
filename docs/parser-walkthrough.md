@@ -39,9 +39,10 @@ does not round large literals; the future arithmetic runner will convert them to
 ## Failure and honest phase status
 
 A lexical error skips parsing. A syntax error leaves the completed token output
-available but produces no AST. After successful parsing the semantic phase is
-still marked not built. Undeclared variables and duplicate declarations are
-semantic tasks and are deliberately not rejected by this parser.
+available but produces no AST. Undeclared variables and duplicate declarations are
+semantic tasks and are deliberately not rejected by this parser. At checkpoint 2
+the semantic phase was marked not built; checkpoint 3 implements it (see
+[semantic-walkthrough.md](semantic-walkthrough.md)).
 
 ## Tests and engineering evidence
 
