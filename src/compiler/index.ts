@@ -23,4 +23,4 @@ export type {
   UnaryExpression, BinaryExpression, GroupingExpression,
 } from './ast';
 export { formatDiagnostic, hasErrors } from './diagnostics';
-export type { Diagnostic, DiagnosticCode, DiagnosticPhase, PhaseId, Severity } from './diagnostics';
+export type { CompilePhase, Diagnostic, DiagnosticCode, DiagnosticPhase, PhaseId, Severity } from './diagnostics';
