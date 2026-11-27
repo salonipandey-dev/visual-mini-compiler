@@ -2,10 +2,13 @@
 export type PhaseId = 'lexical' | 'syntax' | 'semantic';
 export type DiagnosticPhase = PhaseId | 'input';
 export type Severity = 'error' | 'warning';
+/** Stable identifiers for diagnostics that tests and tools may need to tell apart. */
+export type DiagnosticCode = 'undeclared-variable' | 'duplicate-declaration';
 
 export interface Diagnostic {
   readonly phase: DiagnosticPhase;
   readonly severity: Severity;
+  readonly code?: DiagnosticCode;
   readonly message: string;
   readonly line: number;
   readonly column: number;

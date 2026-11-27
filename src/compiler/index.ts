@@ -5,6 +5,8 @@ export { tokenize } from './lexer';
 export type { LexResult } from './lexer';
 export { parse } from './parser';
 export type { ParseResult } from './parser';
+export { analyze } from './semantic';
+export type { SemanticResult, SymbolEntry, SymbolTable } from './semantic';
 export { normalizeSource } from './source';
 export type { Token, TokenType } from './token';
 export type {
@@ -13,4 +15,4 @@ export type {
   UnaryExpression, BinaryExpression, GroupingExpression,
 } from './ast';
 export { formatDiagnostic, hasErrors } from './diagnostics';
-export type { Diagnostic, DiagnosticPhase, PhaseId, Severity } from './diagnostics';
+export type { Diagnostic, DiagnosticCode, DiagnosticPhase, PhaseId, Severity } from './diagnostics';

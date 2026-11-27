@@ -2,6 +2,7 @@ import type { Program } from './ast';
 import { hasErrors, type Diagnostic, type DiagnosticPhase, type PhaseId } from './diagnostics';
 import { tokenize } from './lexer';
 import { parse } from './parser';
+import { analyze, type SymbolTable } from './semantic';
 import type { Token } from './token';
 
 export type PhaseStatus = 'success' | 'error' | 'skipped' | 'not-built';
@@ -19,7 +20,7 @@ export interface CompileResult {
   readonly phases: {
     readonly lexical: PhaseResult<readonly Token[]>;
     readonly syntax: PhaseResult<Program>;
-    readonly semantic: PhaseResult<null>;
+    readonly semantic: PhaseResult<SymbolTable>;
   };
   readonly diagnostics: readonly Diagnostic[];
 }
@@ -53,18 +54,23 @@ export function compile(source: string): CompileResult {
     if (failed) failedPhase = 'syntax';
   }
 
-  const semantic: PhaseResult<null> = failedPhase
-    ? {
-        status: 'skipped', output: null, diagnostics: [],
-        note: 'Skipped because an earlier phase reported an error.',
-      }
-    : {
-        status: 'not-built', output: null, diagnostics: [],
-        note: 'Semantic checks and the symbol table are planned for checkpoint 3.',
-      };
+  // Semantic analysis needs a complete AST, so it runs only if every earlier phase passed.
+  let semantic: PhaseResult<SymbolTable>;
+  if (failedPhase || !syntax.output) {
+    semantic = {
+      status: 'skipped', output: null, diagnostics: [],
+      note: 'Skipped because an earlier phase reported an error.',
+    };
+  } else {
+    const checked = analyze(syntax.output);
+    const failed = hasErrors(checked.diagnostics);
+    // On failure the table is partial (complete = false): it is kept so the UI can show it.
+    semantic = { status: failed ? 'error' : 'success', output: checked.symbolTable, diagnostics: checked.diagnostics };
+    if (failed) failedPhase = 'semantic';
+  }
 
   return {
     source: lex.source, failedPhase, phases: { lexical, syntax, semantic },
-    diagnostics: [...lex.diagnostics, ...syntax.diagnostics],
+    diagnostics: [...lex.diagnostics, ...syntax.diagnostics, ...semantic.diagnostics],
   };
 }

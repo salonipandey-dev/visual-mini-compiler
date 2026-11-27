@@ -3,13 +3,15 @@ import { compile, formatDiagnostic } from '../src/compiler';
 import { EXAMPLES } from '../src/examples/examples';
 
 describe('compilation pipeline', () => {
-  it('runs lexer and parser while marking semantic analysis as not built', () => {
+  it('runs lexical, syntax, and semantic analysis in order', () => {
     const result = compile('let x = 10; print x;');
     expect(result.failedPhase).toBeNull();
     expect(result.phases.lexical.status).toBe('success');
     expect(result.phases.syntax.status).toBe('success');
     expect(result.phases.syntax.output?.statements).toHaveLength(2);
-    expect(result.phases.semantic.status).toBe('not-built');
+    expect(result.phases.semantic.status).toBe('success');
+    expect(result.phases.semantic.output?.symbols.map((s) => s.name)).toEqual(['x']);
+    expect(result.phases.semantic.output?.complete).toBe(true);
   });
 
   it('skips parser and semantics after a lexical error', () => {
@@ -53,16 +55,20 @@ describe('compilation pipeline', () => {
     expect(compile('print 1;\r\n').source).toBe('print 1;\n');
   });
 
-  it('does not claim undeclared variables have passed semantic checks', () => {
+  it('parses an undeclared variable successfully, then rejects it in semantic analysis', () => {
     const result = compile('print missing;');
     expect(result.phases.syntax.status).toBe('success');
-    expect(result.phases.semantic.status).toBe('not-built');
-    expect(result.phases.semantic.output).toBeNull();
+    expect(result.phases.semantic.status).toBe('error');
+    expect(result.failedPhase).toBe('semantic');
+    expect(result.diagnostics.map(formatDiagnostic)).toEqual([
+      "semantic error at 1:7: Undeclared variable 'missing'. (expected a variable declared earlier with let)",
+    ]);
   });
 
   it.each(['', '# empty program'])('accepts an empty program %j', (source) => {
     expect(compile(source).phases.syntax.output?.statements).toEqual([]);
     expect(compile(source).failedPhase).toBeNull();
+    expect(compile(source).phases.semantic.output).toEqual({ symbols: [], complete: true });
   });
 });
 
