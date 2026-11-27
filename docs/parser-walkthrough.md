@@ -52,6 +52,8 @@ semantic tasks and are deliberately not rejected by this parser.
 - Pipeline tests verify phase ordering, failure short-circuiting, fresh results, and all examples.
 - Server-rendered AST component tests check real node labels, empty programs, grouping,
   and large literal display.
+- Chromium smoke tests exercise AST display, error navigation and recovery, and
+  invalidation after an edit followed by Undo.
 - GitHub Actions runs the tests and production build on the reviewed source.
 
 Run npm test and npm run build locally to reproduce the checks. CI logs provide

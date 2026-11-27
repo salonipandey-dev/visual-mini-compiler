@@ -23,10 +23,12 @@ Open the local address printed by Vite, usually http://localhost:5173.
 | npm test | Run compiler and AST-rendering tests once |
 | npm run test:watch | Re-run tests while editing |
 | npm run typecheck | Check TypeScript types |
+| npm run test:e2e | Run the Chromium workbench smoke tests |
 | npm run build | Type-check and build the production site into dist/ |
 | npm run preview | Serve the production build |
 
-On Windows PowerShell, use npm.cmd in place of npm if npm.ps1 is blocked.
+For the browser tests, install Chromium once with npx playwright install chromium.
+On Windows PowerShell, use npm.cmd/npx.cmd if npm.ps1 or npx.ps1 is blocked.
 This avoids changing the PowerShell execution policy.
 
 ## Language
@@ -95,6 +97,6 @@ and operator positions. Grouping does not add to operator depth.
 Source and results live in browser memory. Refreshing restores the default example;
 no source is sent to a server or persisted. No program execution is implemented yet.
 
-GitHub Actions runs the test suite and the TypeScript/production build on pull
-requests and pushes to main. Test outcomes are reported by CI; this README does not
+GitHub Actions runs the test suite, TypeScript/production build, and Chromium
+workbench smoke tests on pull requests and pushes to main. Test outcomes are reported by CI; this README does not
 claim verification of future compiler phases.
