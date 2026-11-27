@@ -4,8 +4,8 @@
 
 After semantic analysis succeeds, the compiler now translates the AST into
 three-address instructions: small steps that each do at most one operation.
-The Intermediate tab lists them. They are generated, not executed; running
-them is the next checkpoint.
+The Intermediate tab lists them. They are generated, not executed; the runner
+added in checkpoint 5 executes them when you press Run.
 
 | File | Responsibility |
 | --- | --- |
@@ -116,8 +116,8 @@ An empty program generates an empty, valid instruction list.
 
 Generation does not calculate anything: print 2 + 3; becomes an ADD instruction,
 not the number 5. It does not change the AST or the symbol table.
-The next checkpoint's runner will execute these instructions with exact BigInt
-arithmetic and produce the program's printed output.
+The runner (see [runtime-walkthrough.md](runtime-walkthrough.md)) executes these
+instructions with exact BigInt arithmetic and produces the program's printed output.
 
 ## Understanding checkpoint
 

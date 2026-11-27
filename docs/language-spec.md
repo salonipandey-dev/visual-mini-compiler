@@ -55,11 +55,12 @@ Names may be declared once. There is no reassignment. Every name used in an
 expression must be declared by an earlier let statement. The only type is integer.
 Semantic analysis (checkpoint 3) enforces these rules and builds the symbol table.
 
-print evaluates an integer expression and appends a newline when the later runner
-is implemented. The current checkpoint checks the AST and generates intermediate
-instructions without executing them.
+print evaluates an integer expression and appends its exact decimal value and a
+newline to the output. Compiling checks the AST and generates intermediate
+instructions without executing them; the runner (checkpoint 5) executes them when
+the user presses Run.
 
-| Expression | Required grouping | Future execution result |
+| Expression | Required grouping | Execution result |
 | --- | --- | --- |
 | 2 + 3 * 4 | 2 + (3 * 4) | 14 |
 | (2 + 3) * 4 | Group addition first | 20 |
@@ -86,9 +87,11 @@ GroupingExpression node keeps its child's operator depth; its syntactic nesting
 is checked independently.
 
 IntegerLiteral.value is canonical decimal text, preserving up to 100 digits exactly.
-The future runner must use exact integer arithmetic and enforce absolute values
-strictly below 10**100 after every arithmetic operation, including intermediate
-results. That runtime check remains pending.
+The runner uses exact BigInt arithmetic and requires every arithmetic result,
+including intermediate results, to have an absolute value strictly below 10**100.
+Each result is checked before it is stored; the first failure stops execution with
+a runtime diagnostic at the operator's position, and output printed before it is
+kept as partial output. See docs/runtime-walkthrough.md.
 
 ## Phase behavior
 

@@ -3,7 +3,7 @@
  *
  * Each instruction does at most one operation on at most two operands and
  * writes one target. Instructions are plain immutable data, never strings or
- * code, so the future runner can read them directly with a switch on `opcode`.
+ * code, so the runner (src/runtime) reads them directly with a switch on `opcode`.
  *
  * Operands are tagged by `kind`, which keeps three namespaces apart:
  *   integer   — an exact literal, stored as canonical decimal text
@@ -63,7 +63,7 @@ export interface NegInstruction {
   readonly operatorSpan: SourceSpan;
 }
 
-/** PRINT operand   (from `print ...;`; executed only by the future runner) */
+/** PRINT operand   (from `print ...;`; output appears only when the runner executes it) */
 export interface PrintInstruction {
   readonly opcode: 'PRINT';
   readonly operand: Operand;
