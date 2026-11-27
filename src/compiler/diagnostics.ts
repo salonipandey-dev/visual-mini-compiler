@@ -1,9 +1,12 @@
 /** Shared diagnostics for the compiler core and workbench. */
 export type PhaseId = 'lexical' | 'syntax' | 'semantic' | 'intermediate';
-export type DiagnosticPhase = PhaseId | 'input';
+/** Where a compilation can fail. */
+export type CompilePhase = PhaseId | 'input';
+/** 'runtime' diagnostics come from executing instructions, never from compiling. */
+export type DiagnosticPhase = CompilePhase | 'runtime';
 export type Severity = 'error' | 'warning';
 /** Stable identifiers for diagnostics that tests and tools may need to tell apart. */
-export type DiagnosticCode = 'undeclared-variable' | 'duplicate-declaration';
+export type DiagnosticCode = 'undeclared-variable' | 'duplicate-declaration' | 'integer-limit-exceeded';
 
 export interface Diagnostic {
   readonly phase: DiagnosticPhase;

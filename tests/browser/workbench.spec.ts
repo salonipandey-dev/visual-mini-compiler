@@ -83,7 +83,7 @@ test('shows the symbol table after successful semantic analysis', async ({ page 
   await expect(semanticTab).toContainText('2 symbols');
   await semanticTab.click();
   await expect(page.getByRole('tabpanel')).toContainText('Semantic analysis passed');
-  await expect(page.getByRole('tabpanel')).toContainText('has not been run');
+  await expect(page.getByRole('tabpanel')).toContainText('does not run the program');
   const rows = page.getByRole('table', { name: 'Symbol table' }).locator('tbody tr');
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(0).locator('td')).toHaveText(['1', 'marks', 'integer', '1', '5']);
@@ -136,7 +136,7 @@ test('recovers after a semantic error is corrected', async ({ page }) => {
 
   await compileSource(page, 'let missing = 1;\nprint missing;');
   await expect(page.locator('.problem')).toHaveCount(0);
-  await expect(page.locator('.problems')).toContainText('It has not been run.');
+  await expect(page.locator('.problems')).toContainText('Compiling does not run it');
   await expect(page.locator('.editor-layer mark')).toHaveCount(0);
   const rows = page.getByRole('table', { name: 'Symbol table' }).locator('tbody tr');
   await expect(rows).toHaveCount(1);
@@ -182,7 +182,7 @@ test('displays generated three-address instructions', async ({ page }) => {
   await expect(tab).toContainText('3 instructions');
   await tab.click();
   await expect(instructionRows(page)).toHaveText(['%t1 = 3 * 4', '%t2 = 2 + %t1', 'PRINT %t2']);
-  await expect(page.getByRole('tabpanel')).toContainText('have not been executed');
+  await expect(page.getByRole('tabpanel')).toContainText('Generating them does not execute');
 
   // An arithmetic instruction links back to its operator in the source.
   await page.getByRole('button', { name: '%t2 = 2 + %t1: show source' }).click();
@@ -249,6 +249,134 @@ test('shows fresh instructions with reset temporaries after recompiling', async 
   await expect(page.locator('.stale-banner')).toHaveCount(0);
   await expect(instructionRows(page)).toHaveText(['t1 = 7', '%t1 = t1 + 1', 'PRINT %t1']);
   await expect(page.getByRole('tab', { name: /Intermediate/ })).toContainText('3 instructions');
-  await expect(page.locator('.problems')).toContainText('It has not been run.');
+  await expect(page.locator('.problems')).toContainText('Compiling does not run it');
   expect(errors).toEqual([]);
+});
+
+const MARKS = 'let marks = 70;\nlet bonus = 5;\nprint marks + bonus;';
+const runButton = (page: Page) => page.getByRole('button', { name: 'Run', exact: true });
+const programOutput = (page: Page) => page.getByLabel('Program output', { exact: true });
+
+test('compiles without running, then Run prints 75', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto('/');
+  await expect(runButton(page)).toBeDisabled();
+  await compileSource(page, MARKS);
+  // Compiling alone produces no output.
+  await expect(page.locator('.output')).toContainText('Compilation 1 is ready. Press Run to execute its 4 instructions.');
+  await expect(programOutput(page)).toHaveCount(0);
+  await expect(runButton(page)).toBeEnabled();
+  await runButton(page).click();
+  await expect(page.locator('.output')).toContainText('Ran successfully');
+  await expect(page.locator('.output')).toContainText('Run 1 of compilation 1 finished successfully and printed 1 line.');
+  await expect(programOutput(page)).toHaveText('75');
+  expect(errors).toEqual([]);
+});
+
+test('running twice replaces the output instead of adding to it', async ({ page }) => {
+  await page.goto('/');
+  await compileSource(page, MARKS + '\nprint marks;');
+  await runButton(page).click();
+  await expect(programOutput(page)).toHaveText('75\n70');
+  await runButton(page).click();
+  await expect(page.locator('.output')).toContainText('Run 2 of compilation 1');
+  await expect(programOutput(page)).toHaveText('75\n70');
+  // The keyboard shortcut runs too, still with fresh state.
+  await page.getByRole('textbox', { name: 'Source program' }).press('Control+Shift+Enter');
+  await expect(page.locator('.output')).toContainText('Run 3 of compilation 1');
+  await expect(programOutput(page)).toHaveText('75\n70');
+});
+
+test('an edit after compiling makes Run unavailable and clears the output', async ({ page }) => {
+  await page.goto('/');
+  const source = await compileSource(page, MARKS);
+  await runButton(page).click();
+  await expect(programOutput(page)).toHaveText('75');
+
+  await source.press('Control+End');
+  await source.press('Space');
+  await expect(runButton(page)).toBeDisabled();
+  await expect(programOutput(page)).toHaveCount(0);
+  await expect(page.locator('.output')).toContainText('the source changed after compilation 1');
+  // The shortcut is guarded by the Run handler itself, not only the disabled button.
+  await source.press('Control+Shift+Enter');
+  await expect(page.locator('[aria-live]')).toHaveText('Run is unavailable: compile the current source first.');
+  await expect(programOutput(page)).toHaveCount(0);
+  await expect(page.locator('.output')).not.toContainText('Ran successfully');
+});
+
+test('an edit followed by Undo still requires recompiling before Run', async ({ page }) => {
+  await page.goto('/');
+  const source = await compileSource(page, MARKS);
+  await runButton(page).click();
+  await expect(programOutput(page)).toHaveText('75');
+
+  await source.press('Control+End');
+  await source.press('Space');
+  await source.press('Control+z');
+  await expect(source).toHaveValue(MARKS);
+  await expect(runButton(page)).toBeDisabled();
+  await expect(page.locator('.stale-banner')).toBeVisible();
+  await source.press('Control+Shift+Enter');
+  await expect(page.locator('[aria-live]')).toHaveText('Run is unavailable: compile the current source first.');
+  await expect(programOutput(page)).toHaveCount(0);
+
+  await source.press('Control+Enter');
+  await expect(runButton(page)).toBeEnabled();
+  await runButton(page).click();
+  await expect(page.locator('.output')).toContainText('Run 1 of compilation 2');
+  await expect(programOutput(page)).toHaveText('75');
+});
+
+test('a failed compilation keeps Run unavailable', async ({ page }) => {
+  await page.goto('/');
+  const source = await compileSource(page, 'print missing;');
+  await expect(page.locator('.problem')).toHaveCount(1);
+  await expect(runButton(page)).toBeDisabled();
+  await expect(page.locator('.output')).toContainText('Run is unavailable because compilation 1 failed');
+  await source.press('Control+Shift+Enter');
+  await expect(page.locator('[aria-live]')).toHaveText('Run is unavailable because compilation failed.');
+  await expect(programOutput(page)).toHaveCount(0);
+  await expect(page.locator('.output')).toContainText('Run is unavailable because compilation 1 failed');
+});
+
+test('a runtime failure shows its diagnostic, location, and partial output', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto('/');
+  const nines = '9'.repeat(100);
+  const source = await compileSource(page, `print 1;\nprint ${nines} * 2;\nprint 3;`);
+  await expect(page.locator('.problem')).toHaveCount(0); // compilation succeeded
+  await runButton(page).click();
+  const output = page.locator('.output');
+  await expect(output).toContainText('Runtime error');
+  await expect(output).toContainText('stopped with a runtime error at line 2, column 108');
+  await expect(output).toContainText('Compilation itself succeeded.');
+  await expect(output).toContainText("Integer limit exceeded: '*' produced a 101-digit value.");
+  await expect(output).toContainText('Partial output (printed before the error)');
+  await expect(page.getByLabel('Partial program output')).toHaveText('1');
+  await expect(page.locator('.problem')).toHaveCount(0); // runtime errors are not compile problems
+  await expect(page.getByRole('tab', { name: /Intermediate/ })).toContainText('instructions');
+
+  await page.getByRole('button', { name: 'Show in source' }).click();
+  expect(await selectionOf(source)).toEqual({ start: 116, end: 117 });
+  await expect(page.locator('.gutter-line.has-error')).toHaveText(['2']);
+  expect(errors).toEqual([]);
+});
+
+test('correcting a program after a runtime error allows a successful run', async ({ page }) => {
+  await page.goto('/');
+  const nines = '9'.repeat(100);
+  await compileSource(page, `print 1;\nprint ${nines} + 1;`);
+  await runButton(page).click();
+  await expect(page.locator('.output')).toContainText('Runtime error');
+
+  await compileSource(page, `print 1;\nprint ${nines} - 1;`);
+  await expect(page.locator('.output')).not.toContainText('Runtime error');
+  await expect(page.locator('.output')).toContainText('ready');
+  await runButton(page).click();
+  await expect(page.locator('.output')).toContainText('Ran successfully');
+  await expect(programOutput(page)).toHaveText('1\n' + '9'.repeat(99) + '8');
+  await expect(page.locator('.gutter-line.has-error')).toHaveCount(0);
 });

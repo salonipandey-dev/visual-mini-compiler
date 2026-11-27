@@ -1,6 +1,6 @@
 /**
  * IntermediateView — the code generator's real output: three-address instructions,
- * in the order a future runner will follow them. Nothing here has been executed.
+ * in the order the runner follows them. Generating them does not execute them.
  * Picking an instruction highlights the source it came from (the operator for arithmetic).
  */
 import { formatInstruction, instructionParts, type Instruction, type IntermediateProgram } from '../compiler';
@@ -20,8 +20,8 @@ export function IntermediateView({ program, stale, selectedIndex, onSelect }: Pr
   return (
     <div className="intermediate">
       <p className="phase-banner banner-info">
-        These instructions were generated from the checked AST. They have not been executed, so
-        there are no results or printed output yet. Running them is the next checkpoint.
+        These instructions were generated from the checked AST. Generating them does not execute
+        them: press Run to execute them, and the printed output appears under Output.
       </p>
 
       <div className="symbol-heading">

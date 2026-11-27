@@ -1,7 +1,7 @@
 /**
  * ir-format.ts — turns instruction objects into readable text, for display only.
  *
- * The generator never builds strings and the future runner never parses them:
+ * The generator never builds strings and the runner never parses them:
  * this module is the only place an instruction becomes text.
  *
  *   %t1 = 3 * 4        BinaryInstruction (MUL)

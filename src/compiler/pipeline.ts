@@ -1,5 +1,5 @@
 import type { Program } from './ast';
-import { hasErrors, type Diagnostic, type DiagnosticPhase, type PhaseId } from './diagnostics';
+import { hasErrors, type CompilePhase, type Diagnostic, type PhaseId } from './diagnostics';
 import { tokenize } from './lexer';
 import { parse } from './parser';
 import { analyze, type SymbolTable } from './semantic';
@@ -18,7 +18,7 @@ export interface PhaseResult<Output> {
 
 export interface CompileResult {
   readonly source: string;
-  readonly failedPhase: DiagnosticPhase | null;
+  readonly failedPhase: CompilePhase | null;
   readonly phases: {
     readonly lexical: PhaseResult<readonly Token[]>;
     readonly syntax: PhaseResult<Program>;
@@ -45,7 +45,9 @@ export function compile(source: string): CompileResult {
     diagnostics: lex.diagnostics,
   };
 
-  let failedPhase: DiagnosticPhase | null = lexFailed ? lex.diagnostics[0].phase : null;
+  let failedPhase: CompilePhase | null = lexFailed
+    ? (lex.diagnostics[0].phase === 'input' ? 'input' : 'lexical')
+    : null;
   let syntax: PhaseResult<Program>;
   if (lexFailed) {
     syntax = {
@@ -75,7 +77,7 @@ export function compile(source: string): CompileResult {
   }
 
   // Code generation needs a validated AST: it runs only after lexical, syntax, and semantic success.
-  // It does not execute anything; the instructions are for the future runner.
+  // It does not execute anything; the separate runner does that when the user presses Run.
   let intermediate: PhaseResult<IntermediateProgram>;
   if (failedPhase || !syntax.output) {
     intermediate = {
