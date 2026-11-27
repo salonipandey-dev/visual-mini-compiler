@@ -901,3 +901,73 @@ kbd {
   color: var(--accent);
   background: var(--accent-tint);
 }
+
+/* ---------------- Intermediate code view ---------------- */
+
+.intermediate {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.banner-info {
+  background: var(--accent-tint);
+  border-left: 3px solid var(--accent);
+}
+
+.lexeme.instruction {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere; /* 100-digit literals wrap instead of widening the table */
+  text-align: left;
+}
+
+/* Operand namespaces get distinct colours: variables, %temporaries, literals. */
+.ir-variable {
+  color: var(--ink);
+}
+
+.ir-temporary {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.ir-integer {
+  color: var(--highlight);
+}
+
+.ir-operator {
+  color: var(--ink-2);
+}
+
+.ir-keyword {
+  color: var(--success);
+}
+
+.tok-op-COPY,
+.tok-op-PRINT {
+  color: var(--success);
+  background: var(--success-tint);
+}
+
+.tok-op-ADD,
+.tok-op-SUB,
+.tok-op-MUL,
+.tok-op-NEG {
+  color: var(--highlight);
+  background: var(--highlight-soft);
+}
+
+/* Four phase tabs: use the short titles whenever the results pane is narrow. */
+.pane-results {
+  container-type: inline-size;
+}
+
+@container (max-width: 880px) {
+  .title-long {
+    display: none;
+  }
+  .title-short {
+    display: inline;
+  }
+}

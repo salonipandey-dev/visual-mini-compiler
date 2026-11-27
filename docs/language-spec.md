@@ -56,7 +56,8 @@ expression must be declared by an earlier let statement. The only type is intege
 Semantic analysis (checkpoint 3) enforces these rules and builds the symbol table.
 
 print evaluates an integer expression and appends a newline when the later runner
-is implemented. The current checkpoint checks the AST without executing it.
+is implemented. The current checkpoint checks the AST and generates intermediate
+instructions without executing them.
 
 | Expression | Required grouping | Future execution result |
 | --- | --- | --- |
@@ -105,6 +106,13 @@ symbol table. Within let name = initializer;, the name is checked for duplicatio
 first (it appears first), then the initializer, and only then is the name declared.
 Undeclared-name diagnostics point at the identifier; duplicate-declaration
 diagnostics point at the second declaration's name.
+
+Intermediate code generation runs only after lexical, syntax, and semantic success;
+otherwise it is skipped and produces no instructions. It emits COPY, ADD, SUB, MUL,
+NEG, and PRINT instructions over tagged operands (integer, variable, temporary),
+in source order with operands generated left to right before their operation.
+Temporaries are numbered from %t1 for each compilation. Generation performs no
+evaluation or constant folding; see docs/ir-walkthrough.md.
 
 Every parse consumes the complete token stream and creates a new AST. AST nodes
 and their child statement arrays are frozen; there is no shared mutable parser state.

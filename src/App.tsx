@@ -12,6 +12,7 @@ import { DEFAULT_EXAMPLE, EXAMPLES } from './examples/examples';
 import { LexicalView } from './ui/LexicalView';
 import { SyntaxView } from './ui/SyntaxView';
 import { SemanticView } from './ui/SemanticView';
+import { IntermediateView, sourceOf } from './ui/IntermediateView';
 import { PhaseMessage } from './ui/PhaseMessage';
 import { PhasePipeline } from './ui/PhasePipeline';
 import { ProblemsPanel } from './ui/ProblemsPanel';
@@ -32,6 +33,7 @@ export default function App() {
   const [picked, setPicked] = useState<Highlight | null>(null); // token or problem the user selected
   const [pickedToken, setPickedToken] = useState<number | null>(null);
   const [pickedSymbol, setPickedSymbol] = useState<number | null>(null);
+  const [pickedInstruction, setPickedInstruction] = useState<number | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const runCounter = useRef(0);
@@ -50,6 +52,7 @@ export default function App() {
     setPicked(null);
     setPickedToken(null);
     setPickedSymbol(null);
+    setPickedInstruction(null);
   }
 
   function handleCompile() {
@@ -94,7 +97,7 @@ export default function App() {
   function pickToken(index: number) {
     const token = result?.phases.lexical.output?.[index];
     if (!token || stale) return;
-    setPickedSymbol(null);
+    clearPicks();
     setPickedToken(index);
     setPicked({
       offset: token.offset,
@@ -108,16 +111,25 @@ export default function App() {
     const symbol = result?.phases.semantic.output?.symbols[index];
     if (!symbol || stale) return;
     const at = symbol.declaredAt;
-    setPickedToken(null);
+    clearPicks();
     setPickedSymbol(index);
+    setPicked({ offset: at.offset, length: at.length, kind: 'token' });
+    revealInEditor(at.offset, at.length, false);
+  }
+
+  function pickInstruction(index: number) {
+    const instruction = result?.phases.intermediate.output?.instructions[index];
+    if (!instruction || stale) return;
+    const at = sourceOf(instruction);
+    clearPicks();
+    setPickedInstruction(index);
     setPicked({ offset: at.offset, length: at.length, kind: 'token' });
     revealInEditor(at.offset, at.length, false);
   }
 
   function jumpToProblem(d: Diagnostic) {
     if (stale) return;
-    setPickedToken(null);
-    setPickedSymbol(null);
+    clearPicks();
     setPicked({ offset: d.offset, length: d.length, kind: 'focus-error' });
     revealInEditor(d.offset, d.length, true);
   }
@@ -270,6 +282,18 @@ export default function App() {
       );
     }
 
+    const intermediate = result.phases.intermediate;
+    if (activePhase === 'intermediate' && intermediate.status === 'success' && intermediate.output) {
+      return (
+        <IntermediateView
+          program={intermediate.output}
+          stale={stale}
+          selectedIndex={pickedInstruction}
+          onSelect={pickInstruction}
+        />
+      );
+    }
+
     if (phase.status === 'error') {
       return (
         <PhaseMessage tone="error" title={title + ' failed'}>
@@ -303,7 +327,8 @@ function describeRun(n: number, r: CompileResult): string {
   }
   const tokens = r.phases.lexical.output?.length ?? 0;
   const symbols = r.phases.semantic.output?.symbols.length ?? 0;
-  return `Compilation ${n}: lexical, syntax and semantic analysis passed with ${plural(tokens, 'token')} and ${plural(symbols, 'symbol')}. The program was checked, not run.`;
+  const instructions = r.phases.intermediate.output?.instructions.length ?? 0;
+  return `Compilation ${n}: all phases passed with ${plural(tokens, 'token')}, ${plural(symbols, 'symbol')}, and ${plural(instructions, 'generated instruction')}. The program was compiled, not run.`;
 }
 
 function plural(n: number, word: string): string {

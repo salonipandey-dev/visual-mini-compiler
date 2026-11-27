@@ -96,7 +96,10 @@ Stale results stay visible but their highlights and source links are disabled un
 ## Phases still unfinished
 
 - Execution of print statements with exact BigInt arithmetic and the 10^100 limit.
-- Intermediate code, optimization, and code generation are outside this checkpoint.
+- Optimization and machine code generation.
+
+Intermediate code generation was added in checkpoint 4; see
+[ir-walkthrough.md](ir-walkthrough.md).
 
 ## Understanding checkpoint
 

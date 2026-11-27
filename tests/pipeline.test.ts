@@ -3,7 +3,7 @@ import { compile, formatDiagnostic } from '../src/compiler';
 import { EXAMPLES } from '../src/examples/examples';
 
 describe('compilation pipeline', () => {
-  it('runs lexical, syntax, and semantic analysis in order', () => {
+  it('runs lexical, syntax, semantic analysis, and code generation in order', () => {
     const result = compile('let x = 10; print x;');
     expect(result.failedPhase).toBeNull();
     expect(result.phases.lexical.status).toBe('success');
@@ -12,6 +12,8 @@ describe('compilation pipeline', () => {
     expect(result.phases.semantic.status).toBe('success');
     expect(result.phases.semantic.output?.symbols.map((s) => s.name)).toEqual(['x']);
     expect(result.phases.semantic.output?.complete).toBe(true);
+    expect(result.phases.intermediate.status).toBe('success');
+    expect(result.phases.intermediate.output?.instructions.map((i) => i.opcode)).toEqual(['COPY', 'PRINT']);
   });
 
   it('skips parser and semantics after a lexical error', () => {
@@ -19,6 +21,7 @@ describe('compilation pipeline', () => {
     expect(result.failedPhase).toBe('lexical');
     expect(result.phases.syntax).toMatchObject({ status: 'skipped', output: null });
     expect(result.phases.semantic.status).toBe('skipped');
+    expect(result.phases.intermediate).toMatchObject({ status: 'skipped', output: null });
     expect(result.diagnostics.map(formatDiagnostic)).toEqual([
       "lexical error at 1:9: Unexpected character '@'",
     ]);

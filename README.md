@@ -2,11 +2,11 @@
 
 A React + TypeScript browser workbench for a Compiler Design course.
 
-**Checkpoint 3:** lexical analysis, recursive-descent parsing, and semantic analysis
-are implemented. Compile a small integer-language program and inspect its tokens,
-its real AST, and its symbol table. Execution and intermediate code are later
-checkpoints: a successful compilation means the program was checked, not run,
-so no printed output or variable values are shown.
+**Checkpoint 4:** lexical analysis, recursive-descent parsing, semantic analysis,
+and three-address intermediate code generation are implemented. Compile a small
+integer-language program and inspect its tokens, AST, symbol table, and generated
+instructions. Execution is the next checkpoint: a successful compilation means the
+program was compiled, not run, so no printed output or variable values are shown.
 
 ## Run
 
@@ -21,7 +21,7 @@ Open the local address printed by Vite, usually http://localhost:5173.
 
 | Command | Purpose |
 | --- | --- |
-| npm test | Run compiler, AST and symbol-table rendering tests once |
+| npm test | Run compiler tests and AST, symbol-table, and instruction rendering tests once |
 | npm run test:watch | Re-run tests while editing |
 | npm run typecheck | Check TypeScript types |
 | npm run test:e2e | Run the Chromium workbench smoke tests |
@@ -50,6 +50,23 @@ once with let, and declared before it is used. A declaration's initializer is
 checked before its name exists, so let total = total + 1; is an error.
 The Semantic tab lists each variable's name, type (integer), and declaration position.
 
+## Intermediate code
+
+After every check passes, the AST is translated into typed three-address instructions:
+
+~~~text
+let marks = 70;          marks = 70
+let bonus = 5;           bonus = 5
+print marks + bonus;     %t1 = marks + bonus
+                         PRINT %t1
+~~~
+
+Opcodes are COPY, ADD, SUB, MUL, NEG, and PRINT. Operands are tagged as exact
+integer literals, source variables, or compiler temporaries (%t1, %t2...), so a
+variable named t1 never collides with temporary %t1. Temporaries restart at %t1
+on every compilation. Generation does not evaluate or fold anything: these are
+instructions for the future runner, not output.
+
 Precedence: unary minus, then multiplication, then addition/subtraction.
 Binary operations associate to the left. print(7); is a print statement with
 a parenthesized expression.
@@ -59,8 +76,9 @@ language. Floats, booleans, conditions, loops, division, reassignment, and C-sty
 comments are outside version 1.
 
 See the [language specification](docs/language-spec.md), the
-[parser walkthrough](docs/parser-walkthrough.md), and the
-[semantic analysis walkthrough](docs/semantic-walkthrough.md).
+[parser walkthrough](docs/parser-walkthrough.md), the
+[semantic analysis walkthrough](docs/semantic-walkthrough.md), and the
+[intermediate code walkthrough](docs/ir-walkthrough.md).
 
 ## Structure
 
@@ -72,11 +90,14 @@ See the [language specification](docs/language-spec.md), the
 | src/compiler/ast.ts | Typed AST records and source spans |
 | src/compiler/parser.ts | Recursive-descent grammar and depth checks |
 | src/compiler/semantic.ts | AST walk, Map-based symbol table, name checks |
+| src/compiler/ir.ts | Typed three-address instructions and tagged operands |
+| src/compiler/codegen.ts | AST-to-instruction generation and temporaries |
+| src/compiler/ir-format.ts | Readable text for instructions (display only) |
 | src/compiler/pipeline.ts | Ordered phases; later phases skip after failure |
 | src/compiler/diagnostics.ts | Shared diagnostic representation |
-| src/ui/ | Editor, token table, AST tree, symbol table, phase tabs, problems |
+| src/ui/ | Editor, token table, AST tree, symbol table, instructions, phase tabs, problems |
 | src/examples/ | Valid and invalid source examples |
-| tests/ | Lexer, parser, semantic, pipeline, and rendering tests |
+| tests/ | Lexer, parser, semantic, code generation, pipeline, and rendering tests |
 | tests/browser/ | Chromium workbench tests (Playwright) |
 
 The compiler core imports neither React nor the DOM. The workbench uses the
@@ -99,6 +120,8 @@ Lexing stops at its first error. Parsing runs only after successful tokenization
 The parser reports the first syntax failure with expected/found details.
 Semantic analysis runs only on a complete AST and reports its first error;
 the declarations accepted before it are shown as a partial symbol table.
+Code generation runs only after all three analyses succeed. Otherwise it is
+skipped and no instructions exist for that compilation.
 The AST includes grouping nodes for display, while preserving the exact identifier
 and operator positions. Grouping does not add to operator depth.
 
@@ -106,7 +129,7 @@ and operator positions. Grouping does not add to operator depth.
 
 Source and results live in browser memory. Refreshing restores the default example;
 no source is sent to a server or persisted. No program execution is implemented yet,
-so the symbol table never shows runtime values.
+so the symbol table and instruction list never show runtime values or printed output.
 
 GitHub Actions runs the test suite, TypeScript/production build, and Chromium
 workbench smoke tests on pull requests and pushes to main. Test outcomes are reported by CI; this README does not

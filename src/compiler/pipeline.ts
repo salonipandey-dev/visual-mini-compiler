@@ -3,6 +3,8 @@ import { hasErrors, type Diagnostic, type DiagnosticPhase, type PhaseId } from '
 import { tokenize } from './lexer';
 import { parse } from './parser';
 import { analyze, type SymbolTable } from './semantic';
+import { generate } from './codegen';
+import type { IntermediateProgram } from './ir';
 import type { Token } from './token';
 
 export type PhaseStatus = 'success' | 'error' | 'skipped' | 'not-built';
@@ -21,6 +23,8 @@ export interface CompileResult {
     readonly lexical: PhaseResult<readonly Token[]>;
     readonly syntax: PhaseResult<Program>;
     readonly semantic: PhaseResult<SymbolTable>;
+    /** Present only when every earlier phase succeeded: a failed compile has no instructions. */
+    readonly intermediate: PhaseResult<IntermediateProgram>;
   };
   readonly diagnostics: readonly Diagnostic[];
 }
@@ -29,6 +33,7 @@ export const PHASES: ReadonlyArray<{ id: PhaseId; title: string; output: string 
   { id: 'lexical', title: 'Lexical analysis', output: 'Tokens' },
   { id: 'syntax', title: 'Syntax analysis', output: 'Abstract syntax tree' },
   { id: 'semantic', title: 'Semantic analysis', output: 'Symbol table & checks' },
+  { id: 'intermediate', title: 'Intermediate code', output: 'Three-address instructions' },
 ];
 
 export function compile(source: string): CompileResult {
@@ -69,8 +74,20 @@ export function compile(source: string): CompileResult {
     if (failed) failedPhase = 'semantic';
   }
 
+  // Code generation needs a validated AST: it runs only after lexical, syntax, and semantic success.
+  // It does not execute anything; the instructions are for the future runner.
+  let intermediate: PhaseResult<IntermediateProgram>;
+  if (failedPhase || !syntax.output) {
+    intermediate = {
+      status: 'skipped', output: null, diagnostics: [],
+      note: 'Skipped because an earlier phase reported an error, so no instructions were generated.',
+    };
+  } else {
+    intermediate = { status: 'success', output: generate(syntax.output), diagnostics: [] };
+  }
+
   return {
-    source: lex.source, failedPhase, phases: { lexical, syntax, semantic },
+    source: lex.source, failedPhase, phases: { lexical, syntax, semantic, intermediate },
     diagnostics: [...lex.diagnostics, ...syntax.diagnostics, ...semantic.diagnostics],
   };
 }

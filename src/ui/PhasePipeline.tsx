@@ -105,6 +105,10 @@ function caption(result: CompileResult | null, id: PhaseId, status: ViewStatus):
         const n = result?.phases.semantic.output?.symbols.length ?? 0;
         return n === 1 ? '1 symbol' : `${n} symbols`;
       }
+      if (id === 'intermediate') {
+        const n = result?.phases.intermediate.output?.instructions.length ?? 0;
+        return n === 1 ? '1 instruction' : `${n} instructions`;
+      }
       return 'Passed';
   }
 }
