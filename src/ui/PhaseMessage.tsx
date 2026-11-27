@@ -6,7 +6,7 @@ export function PhaseMessage({
   title,
   children,
 }: {
-  tone: 'idle' | 'skipped' | 'pending';
+  tone: 'idle' | 'skipped' | 'pending' | 'error';
   title: string;
   children: ReactNode;
 }) {

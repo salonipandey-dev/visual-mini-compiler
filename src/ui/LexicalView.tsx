@@ -16,8 +16,6 @@ const SUMMARY_ORDER: TokenType[] = [
   'KEYWORD',
   'IDENTIFIER',
   'INT_LITERAL',
-  'FLOAT_LITERAL',
-  'BOOL_LITERAL',
   'OPERATOR',
   'DELIMITER',
   'ERROR',
@@ -31,9 +29,8 @@ export function LexicalView({ tokens, status, errorCount, selectedIndex, onSelec
     <div className="lexical">
       {status === 'error' && (
         <p className="phase-banner banner-error">
-          The lexer found {errorCount === 1 ? '1 error' : `${errorCount} errors`}. It skipped each bad
-          piece of text, kept scanning, and listed it below as an ERROR token. Syntax and semantic
-          analysis were skipped.
+          Compilation stopped at {errorCount === 1 ? 'the first error' : 'an input error'}.
+          Tokens scanned before the failure are shown below. Syntax and semantic analysis were skipped.
         </p>
       )}
 
@@ -44,7 +41,7 @@ export function LexicalView({ tokens, status, errorCount, selectedIndex, onSelec
           </span>
         ))}
         <span className="token-total">
-          {tokens.length === 1 ? '1 token' : `${tokens.length} tokens`} including EOF
+          {tokens.length === 1 ? '1 token' : `${tokens.length} tokens`}{tokens.some((t) => t.type === 'EOF') ? ' including EOF' : ' produced'}
         </span>
       </div>
 

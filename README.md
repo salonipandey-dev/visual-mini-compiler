@@ -1,73 +1,100 @@
 # Visual Mini Compiler
 
-A browser workbench for a Compiler Design course. Type a program in a small C-like
-language, press **Compile**, and inspect the real output of each compiler phase.
+A React + TypeScript browser workbench for a Compiler Design course.
 
-**Status: checkpoint 1 of N.** Lexical analysis is complete. Syntax and semantic
-analysis show "Not built yet" until their checkpoints.
+**Checkpoint 2:** lexical analysis and recursive-descent parsing are implemented.
+Compile a small integer-language program and inspect its tokens and real AST.
+Semantic checks, intermediate instructions, and execution are later checkpoints;
+a successful parse does not establish that variables are declared or produce printed output.
 
-## Run it on Windows
+## Run
 
-Needs Node.js 20.19+ (22 LTS or newer recommended), from https://nodejs.org.
+Node.js 20.19 or later is required; CI uses Node 22.
 
-```bat
-cd visual-mini-compiler
+~~~sh
 npm install
 npm run dev
-```
+~~~
 
-Open the address it prints (usually http://localhost:5173).
+Open the local address printed by Vite, usually http://localhost:5173.
 
-| Command | What it does |
+| Command | Purpose |
 | --- | --- |
-| `npm test` | Runs the compiler unit tests once (Vitest, no browser needed) |
-| `npm run test:watch` | Re-runs the tests whenever you save a file |
-| `npm run typecheck` | Checks all TypeScript types |
-| `npm run build` | Type-checks, then builds the production site into `dist/` |
-| `npm run preview` | Serves the built `dist/` folder |
+| npm test | Run compiler and AST-rendering tests once |
+| npm run test:watch | Re-run tests while editing |
+| npm run typecheck | Check TypeScript types |
+| npm run build | Type-check and build the production site into dist/ |
+| npm run preview | Serve the production build |
 
-If PowerShell says *"running scripts is disabled on this system"*, use Command
-Prompt instead, or run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
+On Windows PowerShell, use npm.cmd in place of npm if npm.ps1 is blocked.
+This avoids changing the PowerShell execution policy.
 
-## Project layout
+## Language
 
-```
-src/
-  compiler/          the compiler core: plain TypeScript, no React, no DOM
-    diagnostics.ts   the one Diagnostic shape every phase reports errors with
-    token.ts         token types + the language's keywords, operators, delimiters
-    lexer.ts         phase 1: source text -> tokens + diagnostics
-    pipeline.ts      compile(): runs the phases in order, skips after an error
-    index.ts         the only file the UI imports from
-  examples/          sample programs (valid and invalid) for the Examples menu
-  ui/                React components: editor, phase pipeline, token table, problems
-  App.tsx            state + wiring: editor text -> compile() -> panels
-  styles.css         the workbench theme
-tests/               unit tests for the compiler core and every example program
-```
+~~~text
+# A simple integer program
+let marks = 70;
+let bonus = 5;
+print marks + bonus;
+~~~
 
-## Where data lives
+The lexer recognizes let/print, ASCII identifiers, decimal integer literals,
++ - * =, parentheses, and semicolons. Comments begin with #. Unary minus and
+parentheses are supported. Variables are declared once using let; checks for
+undeclared names and duplicate declarations belong to the upcoming semantic phase.
 
-Everything runs in your browser. The source text and results are held in memory
-(React state); nothing is saved or sent to a server. Refreshing the page restores
-the default example and clears all results.
+Precedence: unary minus, then multiplication, then addition/subtraction.
+Binary operations associate to the left. print(7); is a print statement with
+a parenthesized expression.
 
-## Language (assumed until the Language Specification is supplied)
+The earlier assumed C-like vocabulary has been replaced by the documented .mcl
+language. Floats, booleans, conditions, loops, division, reassignment, and C-style
+comments are outside version 1.
 
-| Token type | Rule | Examples |
-| --- | --- | --- |
-| `KEYWORD` | `int float bool if else while print` | `while` |
-| `BOOL_LITERAL` | `true false` | `true` |
-| `IDENTIFIER` | letter or `_`, then letters, digits, `_` (ASCII) | `total`, `_tmp1` |
-| `INT_LITERAL` | one or more digits | `42` |
-| `FLOAT_LITERAL` | digits `.` digits | `3.14` |
-| `OPERATOR` | `+ - * / % = == != < <= > >= && \|\| !` | `<=` |
-| `DELIMITER` | `( ) { } ; ,` | `;` |
+See [language specification](docs/language-spec.md) and
+[parser walkthrough](docs/parser-walkthrough.md).
 
-Whitespace and comments (`// line` and `/* block */`) are skipped. Lines and
-columns start at 1; a tab counts as one column; Windows `\r\n` line endings
-give the same positions as `\n`.
+## Structure
 
-Lexical errors: illegal characters (`@`, `#`, smart quotes...), a single `&` or
-`|`, malformed numbers (`12.`, `3.14.15`), names starting with a digit (`9lives`),
-and unterminated `/*` comments. The lexer reports every error in one pass.
+| Location | Responsibility |
+| --- | --- |
+| src/compiler/source.ts | Newline normalization and resource limits |
+| src/compiler/token.ts | Token records and vocabulary |
+| src/compiler/lexer.ts | Source to tokens and lexical diagnostics |
+| src/compiler/ast.ts | Typed AST records and source spans |
+| src/compiler/parser.ts | Recursive-descent grammar and depth checks |
+| src/compiler/pipeline.ts | Ordered phases; later phases skip after failure |
+| src/compiler/diagnostics.ts | Shared diagnostic representation |
+| src/ui/ | Editor, token table, AST tree, phase tabs, problems |
+| src/examples/ | Valid and invalid source examples |
+| tests/ | Language, parser, pipeline, and rendering tests |
+
+The compiler core imports neither React nor the DOM. The workbench uses the
+existing mocha palette. Source edits invalidate the previous results by revision,
+including an edit followed by Undo. Stale results are labeled and their source
+navigation/highlights are disabled.
+
+## Limits and positions
+
+- Source is normalized from CRLF or CR to LF.
+- Maximum 5,000 Unicode characters after normalization.
+- Maximum 100 digits per integer literal.
+- Maximum 50 active parenthesized/unary nesting levels.
+- Maximum expression operator depth 50.
+- Lines and columns start at 1; tabs count as one column.
+- Offsets/selection lengths use UTF-16 units for the browser editor.
+- Integers in the AST are exact canonical decimal strings, avoiding Number rounding.
+
+Lexing stops at its first error. Parsing runs only after successful tokenization.
+The parser reports the first syntax failure with expected/found details.
+The AST includes grouping nodes for display, while preserving the exact identifier
+and operator positions. Grouping does not add to operator depth.
+
+## Data and verification
+
+Source and results live in browser memory. Refreshing restores the default example;
+no source is sent to a server or persisted. No program execution is implemented yet.
+
+GitHub Actions runs the test suite and the TypeScript/production build on pull
+requests and pushes to main. Test outcomes are reported by CI; this README does not
+claim verification of future compiler phases.

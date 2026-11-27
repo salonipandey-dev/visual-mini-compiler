@@ -10,7 +10,7 @@ interface Props {
   onJump: (d: Diagnostic) => void;
 }
 
-const PHASE_NAME = Object.fromEntries(PHASES.map((p) => [p.id, p.title.split(' ')[0]]));
+const PHASE_NAME: Record<string, string> = { input: 'Input', ...Object.fromEntries(PHASES.map((p) => [p.id, p.title.split(' ')[0]])) };
 
 export function ProblemsPanel({ result, stale, onJump }: Props) {
   const list = result?.diagnostics ?? [];

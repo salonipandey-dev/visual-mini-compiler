@@ -1,117 +1,50 @@
-/**
- * Example programs for the editor's "Examples" menu.
- *
- * `expect` records which phase SHOULD fail (or null if the program should
- * pass every phase built so far). tests/examples.test.ts checks every
- * example against the real compiler, so this list cannot drift out of date.
- */
 import type { PhaseId } from '../compiler';
 
 export interface Example {
-  id: string;
-  title: string;
-  /** How the menu groups it: a correct program, or one written to show an error. */
-  kind: 'valid' | 'invalid';
-  /** Which phase should report an error with the phases built SO FAR, or null. */
-  expect: PhaseId | null;
-  source: string;
+  readonly id: string;
+  readonly title: string;
+  readonly kind: 'valid' | 'invalid';
+  /** Expected failure among phases implemented in this checkpoint. */
+  readonly expect: PhaseId | null;
+  readonly source: string;
 }
 
 export const EXAMPLES: readonly Example[] = [
   {
-    id: 'arithmetic',
-    title: 'Variables and arithmetic',
-    kind: 'valid',
-    expect: null,
-    source: `// Declare variables and compute an average
-int a = 10;
-int b = 20;
-float avg = (a + b) / 2.0;
-print(avg);
-`,
+    id: 'marks', title: 'Marks and bonus', kind: 'valid', expect: null,
+    source: 'let marks = 70;\nlet bonus = 5;\nprint marks + bonus;\n',
   },
   {
-    id: 'if-else',
-    title: 'If / else with conditions',
-    kind: 'valid',
-    expect: null,
-    source: `int marks = 72;
-bool passed = marks >= 40;
-
-if (passed && marks < 75) {
-    print(marks);
-} else {
-    print(0);
-}
-`,
+    id: 'precedence', title: 'Precedence and parentheses', kind: 'valid', expect: null,
+    source: 'print 2 + 3 * 4;\nprint (2 + 3) * 4;\nprint 20 - 5 - 3;\n',
   },
   {
-    id: 'while',
-    title: 'While loop (factorial)',
-    kind: 'valid',
-    expect: null,
-    source: `/* Compute 5! with a while loop */
-int n = 5;
-int fact = 1;
-while (n > 1) {
-    fact = fact * n;
-    n = n - 1;
-}
-print(fact);
-`,
+    id: 'comments', title: 'Declarations and # comments', kind: 'valid', expect: null,
+    source: '# A small integer program\nlet first = 10;\nlet second = first + 5;\nprint second;\n',
   },
   {
-    id: 'lex-illegal-char',
-    title: "Illegal character '@'",
-    kind: 'invalid',
-    expect: 'lexical',
-    source: `int price = 250;
-int total = 0;
-total = price @ 2;   // '@' is not part of the language
-print(total);
-`,
+    id: 'unary', title: 'Unary minus', kind: 'valid', expect: null,
+    source: 'print -3 * 2;\nprint -(2 + 3);\nprint --3;\n',
   },
   {
-    id: 'lex-bad-numbers',
-    title: 'Malformed numbers',
-    kind: 'invalid',
-    expect: 'lexical',
-    source: `int 9lives = 9;
-float rate = 12.;
-float pi = 3.14.15;
-`,
+    id: 'lex-illegal-char', title: "Illegal character '@'", kind: 'invalid', expect: 'lexical',
+    source: 'let price = 250;\nprint price @ 2;\n',
   },
   {
-    id: 'lex-single-ampersand',
-    title: "Single '&' instead of '&&'",
-    kind: 'invalid',
-    expect: 'lexical',
-    source: `int age = 19;
-bool adult = age >= 18 & age < 60;
-print(adult);
-`,
+    id: 'grammar-missing-semicolon', title: 'Missing semicolon', kind: 'invalid', expect: 'syntax',
+    source: 'let y = 5\nprint y;\n',
   },
   {
-    id: 'lex-unterminated-comment',
-    title: 'Unterminated comment',
-    kind: 'invalid',
-    expect: 'lexical',
-    source: `int x = 1;
-/* this comment is never closed
-print(x);
-`,
+    id: 'grammar-missing-operand', title: 'Missing expression operand', kind: 'invalid', expect: 'syntax',
+    source: 'print 2 + ;\n',
   },
   {
-    id: 'grammar-missing-semicolon',
-    title: 'Missing semicolon (passes the lexer)',
-    kind: 'invalid',
-    // Every character is a legal token, so the LEXER accepts this.
-    // The missing ';' after "int y = 5" is the parser's job: in checkpoint 2
-    // this example's `expect` changes to 'syntax'.
-    expect: null,
-    source: `int y = 5
-print(y);
-`,
+    id: 'grammar-missing-parenthesis', title: 'Unclosed parenthesis', kind: 'invalid', expect: 'syntax',
+    source: 'print (2 + 3;\n',
+  },
+  {
+    id: 'grammar-declaration-name', title: 'Name beginning with a digit', kind: 'invalid', expect: 'syntax',
+    source: 'let 2marks = 4;\n',
   },
 ];
 

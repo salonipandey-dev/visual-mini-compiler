@@ -7,15 +7,17 @@
  * page restores the default example and clears the results.
  */
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { compile, PHASES, type CompileResult, type Diagnostic, type PhaseId } from './compiler';
+import { compile, normalizeSource, PHASES, type CompileResult, type Diagnostic, type PhaseId } from './compiler';
 import { DEFAULT_EXAMPLE, EXAMPLES } from './examples/examples';
 import { LexicalView } from './ui/LexicalView';
+import { SyntaxView } from './ui/SyntaxView';
 import { PhaseMessage } from './ui/PhaseMessage';
 import { PhasePipeline } from './ui/PhasePipeline';
 import { ProblemsPanel } from './ui/ProblemsPanel';
 import { LINE_HEIGHT, SourceEditor, type Highlight } from './ui/SourceEditor';
 
 interface Run {
+  revision: number;
   number: number;
   ms: number;
   result: CompileResult;
@@ -23,6 +25,7 @@ interface Run {
 
 export default function App() {
   const [source, setSource] = useState(DEFAULT_EXAMPLE.source);
+  const [sourceRevision, setSourceRevision] = useState(0);
   const [run, setRun] = useState<Run | null>(null);
   const [activePhase, setActivePhase] = useState<PhaseId>('lexical');
   const [picked, setPicked] = useState<Highlight | null>(null); // token or problem the user selected
@@ -32,8 +35,15 @@ export default function App() {
   const runCounter = useRef(0);
 
   const result = run?.result ?? null;
-  // Results are "stale" once the text differs from the text they were produced from.
-  const stale = result !== null && result.source !== source;
+  // Any edit invalidates results, including an edit followed by Undo.
+  const stale = run !== null && run.revision !== sourceRevision;
+
+  function changeSource(value: string) {
+    setSource(normalizeSource(value));
+    setSourceRevision((revision) => revision + 1);
+    setPicked(null);
+    setPickedToken(null);
+  }
 
   function handleCompile() {
     const started = performance.now();
@@ -42,22 +52,22 @@ export default function App() {
 
     runCounter.current += 1;
     // Replace everything from the previous run: no old tokens or errors survive.
-    setRun({ number: runCounter.current, ms, result: next });
+    setRun({ revision: sourceRevision, number: runCounter.current, ms, result: next });
     setPicked(null);
     setPickedToken(null);
-    if (next.failedPhase) setActivePhase(next.failedPhase);
+    if (next.failedPhase) setActivePhase(next.failedPhase === 'input' ? 'lexical' : next.failedPhase);
     setAnnouncement(describeRun(runCounter.current, next));
   }
 
   function loadExample(id: string) {
     const example = EXAMPLES.find((e) => e.id === id);
     if (!example) return;
-    setSource(example.source);
+    changeSource(example.source);
     setRun(null); // old results belong to different source text
     setPicked(null);
     setPickedToken(null);
     setActivePhase('lexical');
-    setAnnouncement(`Loaded example: ${example.title}. Press Compile to run it.`);
+    setAnnouncement(`Loaded example: ${example.title}. Press Compile to analyze it.`);
     editorRef.current?.focus();
   }
 
@@ -123,13 +133,13 @@ export default function App() {
       <header className="app-header">
         <h1>Visual Mini Compiler</h1>
         <p className="run-info" aria-hidden="true">
-          {run ? `Run ${run.number} finished in ${run.ms.toFixed(1)} ms` : 'Not compiled yet'}
+          {run ? `Compilation ${run.number} finished in ${run.ms.toFixed(1)} ms` : 'Not compiled yet'}
         </p>
       </header>
 
       {stale && run && (
         <p className="stale-banner" role="status">
-          You edited the program after run {run.number}. The results below are for the old text.
+          You edited the program after compilation {run.number}. The results below are for the old text.
           Compile again to refresh them.
         </p>
       )}
@@ -169,7 +179,7 @@ export default function App() {
 
           <SourceEditor
             value={source}
-            onChange={setSource}
+            onChange={changeSource}
             highlights={highlights}
             errorLines={errorLines}
             textareaRef={editorRef}
@@ -225,6 +235,18 @@ export default function App() {
       );
     }
 
+    if (activePhase === 'syntax' && result.phases.syntax.status === 'success' && result.phases.syntax.output) {
+      return <SyntaxView program={result.phases.syntax.output} />;
+    }
+
+    if (phase.status === 'error') {
+      return (
+        <PhaseMessage tone="error" title={title + ' failed'}>
+          <p>Fix the problem shown under the source editor, then compile again.</p>
+        </PhaseMessage>
+      );
+    }
+
     if (phase.status === 'skipped') {
       return (
         <PhaseMessage tone="skipped" title={`${title} was skipped`}>
@@ -247,8 +269,8 @@ function describeRun(n: number, r: CompileResult): string {
   if (r.failedPhase) {
     const first = r.diagnostics[0];
     const count = r.diagnostics.length === 1 ? '1 error' : `${r.diagnostics.length} errors`;
-    return `Run ${n}: ${r.failedPhase} analysis failed with ${count}. First error at line ${first.line}, column ${first.column}.`;
+    return `Compilation ${n}: ${r.failedPhase} analysis failed with ${count}. First error at line ${first.line}, column ${first.column}.`;
   }
   const tokens = r.phases.lexical.output?.length ?? 0;
-  return `Run ${n}: lexical analysis passed with ${tokens === 1 ? '1 token' : `${tokens} tokens`}.`;
+  return `Compilation ${n}: lexical and syntax analysis passed with ${tokens === 1 ? '1 token' : `${tokens} tokens`}.`;
 }
