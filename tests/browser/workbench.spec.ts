@@ -167,3 +167,88 @@ test('marks semantic results stale after an edit until recompiled', async ({ pag
   await expect(page.locator('.problem')).toContainText("Undeclared variable 'b'.");
   expect(errors).toEqual([]);
 });
+
+/** The rendered text of every instruction row, in order. */
+function instructionRows(page: Page) {
+  return page.getByRole('table', { name: 'Three-address instructions' }).locator('tbody tr td:nth-child(2)');
+}
+
+test('displays generated three-address instructions', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto('/');
+  await compileSource(page, 'print 2 + 3 * 4;');
+  const tab = page.getByRole('tab', { name: /Intermediate/ });
+  await expect(tab).toContainText('3 instructions');
+  await tab.click();
+  await expect(instructionRows(page)).toHaveText(['%t1 = 3 * 4', '%t2 = 2 + %t1', 'PRINT %t2']);
+  await expect(page.getByRole('tabpanel')).toContainText('have not been executed');
+
+  // An arithmetic instruction links back to its operator in the source.
+  await page.getByRole('button', { name: '%t2 = 2 + %t1: show source' }).click();
+  const highlight = page.locator('.editor-layer mark.hl-token');
+  await expect(highlight).toHaveText('+');
+  const offset = await highlight.evaluate((mark) => {
+    const range = document.createRange();
+    range.setStart(mark.parentNode!, 0);
+    range.setEndBefore(mark);
+    return range.toString().length;
+  });
+  expect(offset).toBe(8);
+  expect(errors).toEqual([]);
+});
+
+test('skips code generation after a semantic error', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto('/');
+  await compileSource(page, 'let a = 1;\nprint a + missing;');
+  await expect(page.getByRole('tab', { name: /Semantic/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('table', { name: 'Partial symbol table' }).locator('tbody tr')).toHaveCount(1);
+  const tab = page.getByRole('tab', { name: /Intermediate/ });
+  await expect(tab).toContainText('Skipped');
+  await tab.click();
+  await expect(page.getByRole('tabpanel')).toContainText('Intermediate code was skipped');
+  await expect(page.getByRole('tabpanel')).toContainText('no instructions were generated');
+  await expect(page.getByRole('table', { name: 'Three-address instructions' })).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('keeps old instructions marked stale after an edit, including Undo', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto('/');
+  const source = await compileSource(page, 'print 1 + 2;');
+  await page.getByRole('tab', { name: /Intermediate/ }).click();
+  await expect(instructionRows(page)).toHaveText(['%t1 = 1 + 2', 'PRINT %t1']);
+
+  // One keystroke, so a single Undo restores the exact compiled text.
+  await source.press('Control+End');
+  await source.press('Space');
+  await expect(source).toHaveValue('print 1 + 2; ');
+  await expect(page.locator('.stale-banner')).toBeVisible();
+  await expect(instructionRows(page)).toHaveText(['%t1 = 1 + 2', 'PRINT %t1']);
+  await expect(page.getByRole('button', { name: '%t1 = 1 + 2: show source' })).toBeDisabled();
+
+  await source.press('Control+z');
+  await expect(source).toHaveValue('print 1 + 2;');
+  await expect(page.locator('.stale-banner')).toBeVisible();
+  await expect(page.getByRole('button', { name: '%t1 = 1 + 2: show source' })).toBeDisabled();
+  expect(errors).toEqual([]);
+});
+
+test('shows fresh instructions with reset temporaries after recompiling', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto('/');
+  await compileSource(page, 'print 1 + 2 + 3;');
+  await page.getByRole('tab', { name: /Intermediate/ }).click();
+  await expect(instructionRows(page)).toHaveText(['%t1 = 1 + 2', '%t2 = %t1 + 3', 'PRINT %t2']);
+
+  await compileSource(page, 'let t1 = 7;\nprint t1 + 1;');
+  await expect(page.locator('.stale-banner')).toHaveCount(0);
+  await expect(instructionRows(page)).toHaveText(['t1 = 7', '%t1 = t1 + 1', 'PRINT %t1']);
+  await expect(page.getByRole('tab', { name: /Intermediate/ })).toContainText('3 instructions');
+  await expect(page.locator('.problems')).toContainText('It has not been run.');
+  expect(errors).toEqual([]);
+});
