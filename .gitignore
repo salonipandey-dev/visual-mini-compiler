@@ -4,3 +4,7 @@ dist
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
+
+# Browser test artifacts
+test-results/
+playwright-report/

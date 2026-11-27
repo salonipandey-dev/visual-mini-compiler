@@ -2,52 +2,73 @@ import { describe, expect, it } from 'vitest';
 import { compile, formatDiagnostic } from '../src/compiler';
 import { EXAMPLES } from '../src/examples/examples';
 
-describe('pipeline', () => {
-  it('runs the lexer and marks unbuilt phases as not-built', () => {
-    const result = compile('int x = 10;');
+describe('compilation pipeline', () => {
+  it('runs lexer and parser while marking semantic analysis as not built', () => {
+    const result = compile('let x = 10; print x;');
     expect(result.failedPhase).toBeNull();
     expect(result.phases.lexical.status).toBe('success');
-    expect(result.phases.lexical.output).toHaveLength(6);
-    expect(result.phases.syntax.status).toBe('not-built');
+    expect(result.phases.syntax.status).toBe('success');
+    expect(result.phases.syntax.output?.statements).toHaveLength(2);
     expect(result.phases.semantic.status).toBe('not-built');
   });
 
-  it('keeps the tokens but skips later phases after a lexical error', () => {
-    const result = compile('int x = 10 @ 2;');
+  it('skips parser and semantics after a lexical error', () => {
+    const result = compile('print 2 @ 3;');
     expect(result.failedPhase).toBe('lexical');
-    expect(result.phases.lexical.status).toBe('error');
-    expect(result.phases.lexical.output?.length).toBeGreaterThan(0);
-    expect(result.phases.syntax.status).toBe('skipped');
+    expect(result.phases.syntax).toMatchObject({ status: 'skipped', output: null });
     expect(result.phases.semantic.status).toBe('skipped');
     expect(result.diagnostics.map(formatDiagnostic)).toEqual([
-      "lexical error at 1:12: Unexpected character '@'",
+      "lexical error at 1:9: Unexpected character '@'",
     ]);
   });
 
-  it('recovers completely once the error is fixed', () => {
-    const broken = compile('int x = 10 @ 2;');
-    const fixed = compile('int x = 10 * 2;');
+  it('preserves completed tokens but skips semantics after a syntax error', () => {
+    const result = compile('print 2 + ;');
+    expect(result.failedPhase).toBe('syntax');
+    expect(result.phases.lexical.status).toBe('success');
+    expect(result.phases.syntax.output).toBeNull();
+    expect(result.phases.semantic.status).toBe('skipped');
+    expect(result.diagnostics[0]).toMatchObject({ phase: 'syntax', column: 11 });
+  });
+
+  it('rejects excessive source before tokenization and parsing', () => {
+    const result = compile(' '.repeat(5001));
+    expect(result.failedPhase).toBe('input');
+    expect(result.phases.lexical.output).toEqual([]);
+    expect(result.phases.syntax.status).toBe('skipped');
+    expect(result.diagnostics[0].phase).toBe('input');
+  });
+
+  it('recovers completely after a failure and uses fresh results', () => {
+    const broken = compile('print 2 + ;');
+    const fixed = compile('print 2 + 3;');
+    const again = compile('print 2 + 3;');
     expect(broken.diagnostics).toHaveLength(1);
-    expect(fixed.failedPhase).toBeNull();
     expect(fixed.diagnostics).toEqual([]);
-    expect(fixed.phases.lexical.output?.some((t) => t.type === 'ERROR')).toBe(false);
+    expect(fixed).toEqual(again);
+    expect(fixed.phases.syntax.output).not.toBe(again.phases.syntax.output);
   });
 
-  it('gives fresh, independent results for every compile', () => {
-    const first = compile('int a;');
-    const second = compile('int a;');
-    expect(second).toEqual(first);
-    expect(second.phases.lexical.output).not.toBe(first.phases.lexical.output);
+  it('records normalized source so selection offsets match the displayed text', () => {
+    expect(compile('print 1;\r\n').source).toBe('print 1;\n');
   });
 
-  it('records the exact source it compiled', () => {
-    expect(compile('print(1);').source).toBe('print(1);');
+  it('does not claim undeclared variables have passed semantic checks', () => {
+    const result = compile('print missing;');
+    expect(result.phases.syntax.status).toBe('success');
+    expect(result.phases.semantic.status).toBe('not-built');
+    expect(result.phases.semantic.output).toBeNull();
+  });
+
+  it.each(['', '# empty program'])('accepts an empty program %j', (source) => {
+    expect(compile(source).phases.syntax.output?.statements).toEqual([]);
+    expect(compile(source).failedPhase).toBeNull();
   });
 });
 
-describe('example programs', () => {
+describe('all example programs', () => {
   for (const example of EXAMPLES) {
-    it(`"${example.title}" ${example.expect ? `fails in ${example.expect}` : 'passes'}`, () => {
+    it(example.title, () => {
       expect(compile(example.source).failedPhase).toBe(example.expect);
     });
   }

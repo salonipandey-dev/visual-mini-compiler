@@ -7,6 +7,6 @@ export default defineConfig({
   test: {
     // The compiler core is plain TypeScript, so tests run in Node: no browser needed.
     environment: 'node',
-    include: ['tests/**/*.test.ts'],
+    include: ['tests/**/*.test.{ts,tsx}'],
   },
 });

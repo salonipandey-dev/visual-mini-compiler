@@ -844,3 +844,13 @@ kbd {
     transform: none;
   }
 }
+
+/* Syntax tree: uses the existing mocha palette. */
+.syntax { padding: 16px; overflow: auto; min-height: 0; }
+.ast-description { color: var(--ink-2); margin-bottom: 16px; }
+.ast-node { margin: 8px 0; border-left: 1px solid var(--line); padding-left: 12px; }
+.ast-node summary { cursor: pointer; padding: 4px 0; }
+.ast-label { color: var(--ink); font-family: var(--font-code); }
+.ast-position { color: var(--ink-3); font-size: 12px; margin-left: 12px; }
+.ast-child { margin-left: 16px; }
+.message-error h3 { color: var(--error); }
