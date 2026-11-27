@@ -32,8 +32,8 @@ describe('intermediate code view', () => {
 
   it('labels the instructions as generated but not executed', () => {
     const html = render('let marks = 70;\nprint marks;');
-    expect(html).toContain('have not been executed');
-    expect(html).toContain('no results or printed output yet');
+    expect(html).toContain('Generating them does not execute');
+    expect(html).toContain('press Run to execute them');
   });
 
   it('marks variables and temporaries as different kinds of operand', () => {

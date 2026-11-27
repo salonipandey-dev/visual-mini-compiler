@@ -4,7 +4,7 @@ export function SyntaxView({ program }: { program: Program }) {
   return (
     <div className="syntax">
       <p className="ast-description">
-        The parser built this tree from your source. The Semantic tab checks its variable declarations; execution is a later phase.
+        The parser built this tree from your source. The Semantic tab checks its variable declarations; Run executes the generated instructions.
       </p>
       {program.statements.length === 0 && <p className="muted">Valid empty program: no statements.</p>}
       <div aria-label="Abstract syntax tree">

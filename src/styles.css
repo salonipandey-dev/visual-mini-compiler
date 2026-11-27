@@ -378,7 +378,7 @@ kbd {
 
 .problems {
   flex: none;
-  max-height: 34%;
+  max-height: 26%;
   min-height: 96px;
   overflow: auto;
   padding: 12px 16px 16px;
@@ -798,6 +798,9 @@ kbd {
   .problems {
     max-height: none;
   }
+  .output {
+    max-height: none;
+  }
   .table-scroll {
     max-height: 65vh;
   }
@@ -970,4 +973,110 @@ kbd {
   .title-short {
     display: inline;
   }
+}
+
+/* ---------------- Run button and Output panel ---------------- */
+
+.btn-run {
+  height: 34px;
+  padding: 0 18px;
+  border: 1px solid var(--success);
+  border-radius: var(--radius);
+  background: var(--success-tint);
+  color: var(--success);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-run:hover:not(:disabled) {
+  background: var(--success-fill);
+  color: var(--on-success);
+}
+
+.btn-run:disabled {
+  border-color: var(--line);
+  background: transparent;
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+.output {
+  flex: none;
+  max-height: 40%;
+  min-height: 96px;
+  overflow: auto;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.output-note,
+.output-status {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.output-status.status-success {
+  color: var(--success);
+}
+
+.output-status.status-error {
+  color: var(--error);
+}
+
+.output-text {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--success);
+  border-radius: var(--radius);
+  font-family: var(--font-code);
+  font-size: var(--code-size);
+  line-height: var(--code-line);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+
+.output-text.is-partial {
+  border-left-color: var(--highlight);
+}
+
+.output-subheading {
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--highlight);
+}
+
+.runtime-diagnostic {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--error);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+
+.btn-link {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.internal-error {
+  max-width: 60ch;
+  margin: 80px auto;
+  padding: 0 24px;
+  display: grid;
+  gap: 16px;
+  justify-items: start;
 }

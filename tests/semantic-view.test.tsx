@@ -30,7 +30,7 @@ describe('semantic view', () => {
   it('renders the real symbol table in declaration order without values', () => {
     const html = render('let marks = 70;\nlet bonus = 5;\nprint marks + bonus;');
     expect(html).toContain('Semantic analysis passed');
-    expect(html).toContain('has not been run');
+    expect(html).toContain('does not run the program');
     expect(html).toContain('>Symbol table<');
     expect(html).not.toContain('Partial');
     expect(rows(html)).toEqual([

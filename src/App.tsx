@@ -1,7 +1,12 @@
 /**
  * App — owns the state and connects the UI to the compiler core.
  *
- *   editor text ──(Compile)──► compile(source) ──► CompileResult ──► stepper, panels, problems
+ *   editor text ──(Compile)──► compile(source) ──► CompileResult ──► phase tabs, problems
+ *                 ──(Run)──────► execute(instructions) ──► ExecutionResult ──► Output panel
+ *
+ * Compiling never runs the program. Run executes the instructions of the latest
+ * compilation, and only when that compilation succeeded AND was made from the
+ * editor's current revision (so an edit, even followed by Undo, requires recompiling).
  *
  * All state lives in memory. Nothing is saved or sent anywhere; refreshing the
  * page restores the default example and clears the results.
@@ -9,7 +14,10 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { compile, normalizeSource, PHASES, type CompileResult, type Diagnostic, type PhaseId } from './compiler';
 import { DEFAULT_EXAMPLE, EXAMPLES } from './examples/examples';
+import { execute, runnableProgram, type ExecutionResult } from './runtime';
 import { LexicalView } from './ui/LexicalView';
+import { OutputPanel, type OutputState } from './ui/OutputPanel';
+import { reportInternalError } from './ui/internalError';
 import { SyntaxView } from './ui/SyntaxView';
 import { SemanticView } from './ui/SemanticView';
 import { IntermediateView, sourceOf } from './ui/IntermediateView';
@@ -18,33 +26,42 @@ import { PhasePipeline } from './ui/PhasePipeline';
 import { ProblemsPanel } from './ui/ProblemsPanel';
 import { LINE_HEIGHT, SourceEditor, type Highlight } from './ui/SourceEditor';
 
-interface Run {
+interface Compilation {
   revision: number;
   number: number;
   ms: number;
   result: CompileResult;
 }
 
+/** One press of Run. Kept apart from the compilation it executed. */
+type Execution =
+  | { kind: 'ran'; compilation: number; run: number; result: ExecutionResult }
+  | { kind: 'internal-error'; compilation: number; run: number };
+
 export default function App() {
   const [source, setSource] = useState(DEFAULT_EXAMPLE.source);
   const [sourceRevision, setSourceRevision] = useState(0);
-  const [run, setRun] = useState<Run | null>(null);
+  const [compilation, setCompilation] = useState<Compilation | null>(null);
   const [activePhase, setActivePhase] = useState<PhaseId>('lexical');
   const [picked, setPicked] = useState<Highlight | null>(null); // token or problem the user selected
   const [pickedToken, setPickedToken] = useState<number | null>(null);
   const [pickedSymbol, setPickedSymbol] = useState<number | null>(null);
   const [pickedInstruction, setPickedInstruction] = useState<number | null>(null);
+  const [execution, setExecution] = useState<Execution | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const editorRef = useRef<HTMLTextAreaElement>(null);
-  const runCounter = useRef(0);
+  const compileCounter = useRef(0);
 
-  const result = run?.result ?? null;
+  const result = compilation?.result ?? null;
   // Any edit invalidates results, including an edit followed by Undo.
-  const stale = run !== null && run.revision !== sourceRevision;
+  const stale = compilation !== null && compilation.revision !== sourceRevision;
+  // The program Run would execute: only a fully successful, current compilation has one.
+  const runnable = compilation !== null && !stale ? runnableProgram(compilation.result) : null;
 
   function changeSource(value: string) {
     setSource(normalizeSource(value));
     setSourceRevision((revision) => revision + 1);
+    setExecution(null); // output belonged to the old text
     clearPicks();
   }
 
@@ -60,19 +77,44 @@ export default function App() {
     const next = compile(source); // the ONLY place the UI calls the compiler
     const ms = performance.now() - started;
 
-    runCounter.current += 1;
-    // Replace everything from the previous run: no old tokens or errors survive.
-    setRun({ revision: sourceRevision, number: runCounter.current, ms, result: next });
+    compileCounter.current += 1;
+    // Replace everything from the previous compilation: no old tokens or errors survive.
+    setCompilation({ revision: sourceRevision, number: compileCounter.current, ms, result: next });
+    setExecution(null); // compiling never runs the program, and old output is obsolete
     clearPicks();
     if (next.failedPhase) setActivePhase(next.failedPhase === 'input' ? 'lexical' : next.failedPhase);
-    setAnnouncement(describeRun(runCounter.current, next));
+    setAnnouncement(describeCompilation(compileCounter.current, next));
+  }
+
+  function handleRun() {
+    // Checked here as well as by the disabled button: never run stale or failed compilations.
+    if (!compilation || compilation.revision !== sourceRevision) {
+      setAnnouncement('Run is unavailable: compile the current source first.');
+      return;
+    }
+    const program = runnableProgram(compilation.result);
+    if (!program) {
+      setAnnouncement('Run is unavailable because compilation failed.');
+      return;
+    }
+    const runNumber = execution && execution.compilation === compilation.number ? execution.run + 1 : 1;
+    clearPicks();
+    try {
+      const result = execute(program); // fresh variables, temporaries, and output every time
+      setExecution({ kind: 'ran', compilation: compilation.number, run: runNumber, result });
+      setAnnouncement(describeExecution(runNumber, result));
+    } catch (error) {
+      reportInternalError('the runner', error);
+      setExecution({ kind: 'internal-error', compilation: compilation.number, run: runNumber });
+      setAnnouncement(`Run ${runNumber} failed because of an internal error in the workbench, not in your program.`);
+    }
   }
 
   function loadExample(id: string) {
     const example = EXAMPLES.find((e) => e.id === id);
     if (!example) return;
     changeSource(example.source);
-    setRun(null); // old results belong to different source text
+    setCompilation(null); // old results belong to different source text
     clearPicks();
     setActivePhase('lexical');
     setAnnouncement(`Loaded example: ${example.title}. Press Compile to analyze it.`);
@@ -137,23 +179,34 @@ export default function App() {
   // Highlights are only drawn while the results still match the text.
   const highlights = useMemo<Highlight[]>(() => {
     if (!result || stale) return [];
-    const errors: Highlight[] = result.diagnostics.map((d) => ({
+    const errors: Highlight[] = allDiagnostics(result, execution).map((d) => ({
       offset: d.offset,
       length: d.length,
       kind: 'error',
     }));
     return picked ? [picked, ...errors] : errors;
-  }, [result, stale, picked]);
+  }, [result, stale, picked, execution]);
 
   const errorLines = useMemo(
-    () => new Set(result && !stale ? result.diagnostics.map((d) => d.line) : []),
-    [result, stale],
+    () => new Set(result && !stale ? allDiagnostics(result, execution).map((d) => d.line) : []),
+    [result, stale, execution],
   );
+
+  const outputState: OutputState = !compilation
+    ? { kind: 'not-compiled' }
+    : stale
+      ? { kind: 'stale', compilation: compilation.number }
+      : !runnable
+        ? { kind: 'compile-failed', compilation: compilation.number }
+        : execution && execution.compilation === compilation.number
+          ? execution
+          : { kind: 'ready', compilation: compilation.number, instructionCount: runnable.instructions.length };
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
-      handleCompile();
+      if (e.shiftKey) handleRun();
+      else handleCompile();
     }
   }
 
@@ -162,13 +215,13 @@ export default function App() {
       <header className="app-header">
         <h1>Visual Mini Compiler</h1>
         <p className="run-info" aria-hidden="true">
-          {run ? `Compilation ${run.number} finished in ${run.ms.toFixed(1)} ms` : 'Not compiled yet'}
+          {compilation ? `Compilation ${compilation.number} finished in ${compilation.ms.toFixed(1)} ms` : 'Not compiled yet'}
         </p>
       </header>
 
-      {stale && run && (
+      {stale && compilation && (
         <p className="stale-banner" role="status">
-          You edited the program after compilation {run.number}. The results below are for the old text.
+          You edited the program after compilation {compilation.number}. The results below are for the old text.
           Compile again to refresh them.
         </p>
       )}
@@ -204,6 +257,15 @@ export default function App() {
             <button type="button" className="btn-compile" onClick={handleCompile}>
               Compile
             </button>
+            <button
+              type="button"
+              className="btn-run"
+              onClick={handleRun}
+              disabled={runnable === null}
+              title={runnable === null ? 'Compile the current source successfully to enable Run' : 'Execute the compiled instructions'}
+            >
+              Run
+            </button>
           </div>
 
           <SourceEditor
@@ -215,6 +277,7 @@ export default function App() {
           />
 
           <ProblemsPanel result={result} stale={stale} onJump={jumpToProblem} />
+          <OutputPanel state={outputState} onShowSource={jumpToProblem} />
         </section>
 
         <section className={`pane pane-results${stale ? ' is-stale' : ''}`} aria-label="Phase results">
@@ -319,7 +382,24 @@ export default function App() {
   }
 }
 
-function describeRun(n: number, r: CompileResult): string {
+/** Compile diagnostics plus, when the last run failed, its runtime diagnostic. */
+function allDiagnostics(result: CompileResult, execution: Execution | null): readonly Diagnostic[] {
+  const runtime = execution?.kind === 'ran' ? execution.result.diagnostic : null;
+  return runtime ? [...result.diagnostics, runtime] : result.diagnostics;
+}
+
+function describeExecution(run: number, result: ExecutionResult): string {
+  const printed = plural(result.lines.length, 'line');
+  if (result.status === 'success') {
+    const shown = result.lines.length > 0 && result.lines.length <= 5 ? ` Output: ${result.lines.join(', ')}.` : '';
+    return `Run ${run} finished successfully and printed ${printed}.${shown}`;
+  }
+  const d = result.diagnostic;
+  const where = d ? ` at line ${d.line}, column ${d.column}` : '';
+  return `Run ${run} stopped with a runtime error${where}. ${printed} printed before the error.`;
+}
+
+function describeCompilation(n: number, r: CompileResult): string {
   if (r.failedPhase) {
     const first = r.diagnostics[0];
     const count = r.diagnostics.length === 1 ? '1 error' : `${r.diagnostics.length} errors`;
@@ -328,7 +408,7 @@ function describeRun(n: number, r: CompileResult): string {
   const tokens = r.phases.lexical.output?.length ?? 0;
   const symbols = r.phases.semantic.output?.symbols.length ?? 0;
   const instructions = r.phases.intermediate.output?.instructions.length ?? 0;
-  return `Compilation ${n}: all phases passed with ${plural(tokens, 'token')}, ${plural(symbols, 'symbol')}, and ${plural(instructions, 'generated instruction')}. The program was compiled, not run.`;
+  return `Compilation ${n}: all phases passed with ${plural(tokens, 'token')}, ${plural(symbols, 'symbol')}, and ${plural(instructions, 'generated instruction')}. The program was compiled, not run. Press Run to execute it.`;
 }
 
 function plural(n: number, word: string): string {

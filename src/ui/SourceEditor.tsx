@@ -89,7 +89,7 @@ export function SourceEditor({ value, onChange, highlights, errorLines, textarea
         </span>
         <span>{lineCount === 1 ? '1 line' : `${lineCount} lines`}</span>
         <span className="editor-hint">
-          <kbd>Ctrl</kbd>+<kbd>Enter</kbd> compiles
+          <kbd>Ctrl</kbd>+<kbd>Enter</kbd> compiles, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> runs
         </span>
       </div>
     </div>

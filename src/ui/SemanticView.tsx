@@ -25,7 +25,7 @@ export function SemanticView({ table, status, diagnostics, stale, selectedIndex,
       {status === 'success' ? (
         <p className="phase-banner banner-success">
           Semantic analysis passed: every variable is declared once and declared before it is used.
-          This checks the source only. The program has not been run, so the table has no values.
+          This checks the source only; it does not run the program, so the table has no values.
         </p>
       ) : (
         <p className="phase-banner banner-error">
