@@ -60,7 +60,7 @@ export function compile(source: string): CompileResult {
       }
     : {
         status: 'not-built', output: null, diagnostics: [],
-        note: 'Semantic checks and the symbol table are implemented in checkpoint 3.',
+        note: 'Semantic checks and the symbol table are planned for checkpoint 3.',
       };
 
   return {

@@ -259,7 +259,7 @@ export default function App() {
     return (
       <PhaseMessage tone="pending" title={`${title} is not built yet`}>
         <p>{phase.note}</p>
-        <p>Until then, the token list from lexical analysis is the last real output.</p>
+        <p>The Syntax tab shows the abstract syntax tree produced by the completed parser.</p>
       </PhaseMessage>
     );
   }
