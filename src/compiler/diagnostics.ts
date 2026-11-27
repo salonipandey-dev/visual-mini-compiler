@@ -1,5 +1,5 @@
 /** Shared diagnostics for the compiler core and workbench. */
-export type PhaseId = 'lexical' | 'syntax' | 'semantic';
+export type PhaseId = 'lexical' | 'syntax' | 'semantic' | 'intermediate';
 export type DiagnosticPhase = PhaseId | 'input';
 export type Severity = 'error' | 'warning';
 /** Stable identifiers for diagnostics that tests and tools may need to tell apart. */

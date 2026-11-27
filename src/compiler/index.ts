@@ -7,6 +7,14 @@ export { parse } from './parser';
 export type { ParseResult } from './parser';
 export { analyze } from './semantic';
 export type { SemanticResult, SymbolEntry, SymbolTable } from './semantic';
+export { generate } from './codegen';
+export { formatInstruction, formatOperand, instructionParts } from './ir-format';
+export type { InstructionPart } from './ir-format';
+export type {
+  Instruction, Opcode, BinaryOpcode, IntermediateProgram, Operand,
+  IntegerOperand, VariableOperand, TemporaryOperand,
+  CopyInstruction, BinaryInstruction, NegInstruction, PrintInstruction,
+} from './ir';
 export { normalizeSource } from './source';
 export type { Token, TokenType } from './token';
 export type {
