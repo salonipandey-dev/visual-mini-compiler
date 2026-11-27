@@ -101,6 +101,10 @@ function caption(result: CompileResult | null, id: PhaseId, status: ViewStatus):
         const n = result?.phases.lexical.output?.length ?? 0;
         return n === 1 ? '1 token' : `${n} tokens`;
       }
+      if (id === 'semantic') {
+        const n = result?.phases.semantic.output?.symbols.length ?? 0;
+        return n === 1 ? '1 symbol' : `${n} symbols`;
+      }
       return 'Passed';
   }
 }

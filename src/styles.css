@@ -625,6 +625,11 @@ kbd {
   border-left: 3px solid var(--error);
 }
 
+.banner-success {
+  background: var(--success-tint);
+  border-left: 3px solid var(--success);
+}
+
 /* ---------------- Lexical view ---------------- */
 
 .lexical {
@@ -764,7 +769,12 @@ kbd {
   cursor: pointer;
 }
 
-.lexeme:hover {
+.lexeme:disabled {
+  cursor: default;
+  border-color: transparent;
+}
+
+.lexeme:hover:not(:disabled) {
   border-color: var(--highlight);
 }
 
@@ -854,3 +864,40 @@ kbd {
 .ast-position { color: var(--ink-3); font-size: 12px; margin-left: 12px; }
 .ast-child { margin-left: 16px; }
 .message-error h3 { color: var(--error); }
+
+/* ---------------- Semantic view: symbol table ---------------- */
+
+.semantic {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.symbol-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 16px 16px 10px;
+}
+
+.symbol-heading h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.symbol-count {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.symbols-empty {
+  padding: 0 16px;
+  color: var(--ink-2);
+}
+
+.tok-TYPE {
+  color: var(--accent);
+  background: var(--accent-tint);
+}

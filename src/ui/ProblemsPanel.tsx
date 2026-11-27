@@ -24,7 +24,7 @@ export function ProblemsPanel({ result, stale, onJump }: Props) {
 
       {!result && <p className="problems-empty">Errors from every phase are listed here after you compile.</p>}
       {result && list.length === 0 && (
-        <p className="problems-empty">No problems. Every phase built so far accepted this program.</p>
+        <p className="problems-empty">No problems. Lexical, syntax and semantic analysis accepted this program. It has not been run.</p>
       )}
 
       {list.length > 0 && (

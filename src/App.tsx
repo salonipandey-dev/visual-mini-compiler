@@ -11,6 +11,7 @@ import { compile, normalizeSource, PHASES, type CompileResult, type Diagnostic, 
 import { DEFAULT_EXAMPLE, EXAMPLES } from './examples/examples';
 import { LexicalView } from './ui/LexicalView';
 import { SyntaxView } from './ui/SyntaxView';
+import { SemanticView } from './ui/SemanticView';
 import { PhaseMessage } from './ui/PhaseMessage';
 import { PhasePipeline } from './ui/PhasePipeline';
 import { ProblemsPanel } from './ui/ProblemsPanel';
@@ -30,6 +31,7 @@ export default function App() {
   const [activePhase, setActivePhase] = useState<PhaseId>('lexical');
   const [picked, setPicked] = useState<Highlight | null>(null); // token or problem the user selected
   const [pickedToken, setPickedToken] = useState<number | null>(null);
+  const [pickedSymbol, setPickedSymbol] = useState<number | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const runCounter = useRef(0);
@@ -41,8 +43,13 @@ export default function App() {
   function changeSource(value: string) {
     setSource(normalizeSource(value));
     setSourceRevision((revision) => revision + 1);
+    clearPicks();
+  }
+
+  function clearPicks() {
     setPicked(null);
     setPickedToken(null);
+    setPickedSymbol(null);
   }
 
   function handleCompile() {
@@ -53,8 +60,7 @@ export default function App() {
     runCounter.current += 1;
     // Replace everything from the previous run: no old tokens or errors survive.
     setRun({ revision: sourceRevision, number: runCounter.current, ms, result: next });
-    setPicked(null);
-    setPickedToken(null);
+    clearPicks();
     if (next.failedPhase) setActivePhase(next.failedPhase === 'input' ? 'lexical' : next.failedPhase);
     setAnnouncement(describeRun(runCounter.current, next));
   }
@@ -64,8 +70,7 @@ export default function App() {
     if (!example) return;
     changeSource(example.source);
     setRun(null); // old results belong to different source text
-    setPicked(null);
-    setPickedToken(null);
+    clearPicks();
     setActivePhase('lexical');
     setAnnouncement(`Loaded example: ${example.title}. Press Compile to analyze it.`);
     editorRef.current?.focus();
@@ -89,6 +94,7 @@ export default function App() {
   function pickToken(index: number) {
     const token = result?.phases.lexical.output?.[index];
     if (!token || stale) return;
+    setPickedSymbol(null);
     setPickedToken(index);
     setPicked({
       offset: token.offset,
@@ -98,9 +104,20 @@ export default function App() {
     revealInEditor(token.offset, token.lexeme.length, false);
   }
 
+  function pickSymbol(index: number) {
+    const symbol = result?.phases.semantic.output?.symbols[index];
+    if (!symbol || stale) return;
+    const at = symbol.declaredAt;
+    setPickedToken(null);
+    setPickedSymbol(index);
+    setPicked({ offset: at.offset, length: at.length, kind: 'token' });
+    revealInEditor(at.offset, at.length, false);
+  }
+
   function jumpToProblem(d: Diagnostic) {
     if (stale) return;
     setPickedToken(null);
+    setPickedSymbol(null);
     setPicked({ offset: d.offset, length: d.length, kind: 'focus-error' });
     revealInEditor(d.offset, d.length, true);
   }
@@ -239,6 +256,20 @@ export default function App() {
       return <SyntaxView program={result.phases.syntax.output} />;
     }
 
+    const semantic = result.phases.semantic;
+    if (activePhase === 'semantic' && semantic.output && (semantic.status === 'success' || semantic.status === 'error')) {
+      return (
+        <SemanticView
+          table={semantic.output}
+          status={semantic.status}
+          diagnostics={semantic.diagnostics}
+          stale={stale}
+          selectedIndex={pickedSymbol}
+          onSelect={pickSymbol}
+        />
+      );
+    }
+
     if (phase.status === 'error') {
       return (
         <PhaseMessage tone="error" title={title + ' failed'}>
@@ -259,7 +290,6 @@ export default function App() {
     return (
       <PhaseMessage tone="pending" title={`${title} is not built yet`}>
         <p>{phase.note}</p>
-        <p>The Syntax tab shows the abstract syntax tree produced by the completed parser.</p>
       </PhaseMessage>
     );
   }
@@ -272,5 +302,10 @@ function describeRun(n: number, r: CompileResult): string {
     return `Compilation ${n}: ${r.failedPhase} analysis failed with ${count}. First error at line ${first.line}, column ${first.column}.`;
   }
   const tokens = r.phases.lexical.output?.length ?? 0;
-  return `Compilation ${n}: lexical and syntax analysis passed with ${tokens === 1 ? '1 token' : `${tokens} tokens`}.`;
+  const symbols = r.phases.semantic.output?.symbols.length ?? 0;
+  return `Compilation ${n}: lexical, syntax and semantic analysis passed with ${plural(tokens, 'token')} and ${plural(symbols, 'symbol')}. The program was checked, not run.`;
+}
+
+function plural(n: number, word: string): string {
+  return n === 1 ? `1 ${word}` : `${n} ${word}s`;
 }

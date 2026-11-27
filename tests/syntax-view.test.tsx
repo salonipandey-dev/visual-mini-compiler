@@ -17,7 +17,7 @@ describe('syntax view', () => {
     expect(html).toContain('Binary: +');
     expect(html).toContain('Variable: marks');
     expect(html).toContain('Abstract syntax tree');
-    expect(html).toContain('Semantic validation and execution are later phases.');
+    expect(html).toContain('The Semantic tab checks its variable declarations; execution is a later phase.');
   });
 
   it('renders empty programs as valid', () => {
