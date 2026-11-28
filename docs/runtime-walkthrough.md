@@ -130,7 +130,8 @@ is runnable and produces empty output.
 
 ## Remaining work
 
-File import/export, final packaging, and the project report are later tasks.
+File import and export were added in checkpoint 6 (see file-workflow.md).
+Final packaging and the project report are later tasks.
 
 ## Understanding checkpoint
 

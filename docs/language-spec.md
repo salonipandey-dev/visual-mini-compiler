@@ -7,6 +7,10 @@ Python/Tkinter implementation sketches are superseded by this web implementation
 ## Source and tokens
 
 Files use the .mcl extension and UTF-8 source text. Normalize CRLF and lone CR to LF.
+When a file is opened, invalid UTF-8 is rejected (never replaced), a leading UTF-8
+byte-order mark is removed, and files over 1 MB are refused; smaller files are never
+truncated, and the source-length limit below is reported by compilation. Downloaded
+source is the normalized text, as UTF-8 with LF newlines. See docs/file-workflow.md.
 Spaces, tabs, and LF are ignored. A # comment extends to the next LF or EOF.
 Only let and print are reserved keywords. Names are case-sensitive ASCII forms
 matching [A-Za-z_][A-Za-z0-9_]*. Digits form a decimal integer literal.

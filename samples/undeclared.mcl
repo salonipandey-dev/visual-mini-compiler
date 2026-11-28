@@ -1,0 +1,3 @@
+# Uses a name that was never declared
+let marks = 70;
+print marks + bonus;

@@ -2,11 +2,12 @@
 
 A React + TypeScript browser workbench for a Compiler Design course.
 
-**Checkpoint 5:** lexical analysis, recursive-descent parsing, semantic analysis,
-three-address intermediate code generation, and an instruction runner are implemented.
-Compile a small integer-language program and inspect its tokens, AST, symbol table,
-and generated instructions; then press **Run** to execute the instructions and see
-the printed output. Compiling never runs the program: Run is a separate step.
+**Checkpoint 6:** lexical analysis, recursive-descent parsing, semantic analysis,
+three-address intermediate code generation, an instruction runner, and .mcl file
+handling are implemented. Open a .mcl file (or load an example), compile it and inspect
+its tokens, AST, symbol table, and generated instructions; then press **Run** to execute
+the instructions and see the printed output. Compiling never runs the program, and
+**Download .mcl** saves your edited source as a file.
 
 ## Run
 
@@ -19,12 +20,34 @@ npm run dev
 
 Open the local address printed by Vite, usually http://localhost:5173.
 
+### Local startup on Windows
+
+1. Install Node.js 22 LTS from https://nodejs.org (includes npm).
+2. In Command Prompt: git clone https://github.com/salonipandey-dev/visual-mini-compiler.git,
+   then cd visual-mini-compiler, npm install, and npm run dev.
+3. Open http://localhost:5173 in Chrome, Edge, or Firefox. Stop the server with Ctrl+C.
+
+### Five-minute demonstration
+
+1. Use **Open .mcl** to open samples/marks.mcl from the cloned repository.
+   The file bar shows marks.mcl and "No unsaved changes".
+2. Press **Compile** (Ctrl+Enter). Show the Lexical tokens, the Syntax tree, the
+   Semantic symbol table, and the Intermediate instructions.
+3. Press **Run** (Ctrl+Shift+Enter). Output shows 75.
+4. Add print marks; at the end. The file bar shows "Unsaved changes" and Run is disabled.
+5. Choose an example from **Load an example**. The dialog offers Keep editing,
+   Download a copy, or Replace without downloading. Choose **Download a copy**,
+   then **Keep editing**, and open the downloaded file to show its contents.
+6. Compile and Run again: Output shows 75 and 70.
+7. Optional: open samples/undeclared.mcl to show a semantic error that keeps Run
+   unavailable, or samples/limit.mcl to show a runtime limit error with partial output.
+
 | Command | Purpose |
 | --- | --- |
-| npm test | Run compiler tests and AST, symbol-table, and instruction rendering tests once |
+| npm test | Run compiler, runner, and file-handling tests and the rendering tests once |
 | npm run test:watch | Re-run tests while editing |
 | npm run typecheck | Check TypeScript types |
-| npm run test:e2e | Run the Chromium workbench smoke tests |
+| npm run test:e2e | Run the Chromium workbench and file-workflow tests |
 | npm run build | Type-check and build the production site into dist/ |
 | npm run preview | Serve the production build |
 
@@ -117,12 +140,14 @@ See the [language specification](docs/language-spec.md), the
 | src/compiler/ir-format.ts | Readable text for instructions (display only) |
 | src/runtime/runner.ts | Executes instructions with BigInt and the 10^100 limit |
 | src/runtime/index.ts | Runtime API and the runnable-compilation check |
+| src/files/ | Source document (revision vs baseline), UTF-8 file reading, downloads, stale-read guard |
 | src/compiler/pipeline.ts | Ordered phases; later phases skip after failure |
 | src/compiler/diagnostics.ts | Shared diagnostic representation |
-| src/ui/ | Editor, token table, AST tree, symbol table, instructions, phase tabs, problems, output, error boundary |
+| src/ui/ | Editor, file bar, replace dialog, token table, AST tree, symbol table, instructions, phase tabs, problems, output, error boundary |
 | src/examples/ | Valid and invalid source examples |
-| tests/ | Lexer, parser, semantic, code generation, runner, pipeline, and rendering tests |
-| tests/browser/ | Chromium workbench tests (Playwright) |
+| tests/ | Lexer, parser, semantic, code generation, runner, file-handling, pipeline, and rendering tests |
+| tests/browser/ | Chromium workbench and file-workflow tests (Playwright) |
+| samples/ | Example .mcl files for opening in the workbench |
 
 The compiler core and the runtime import neither React nor the DOM; the compiler never imports the runtime. The workbench uses the
 existing mocha palette. Source edits invalidate the previous results by revision,
@@ -149,12 +174,50 @@ skipped and no instructions exist for that compilation.
 The AST includes grouping nodes for display, while preserving the exact identifier
 and operator positions. Grouping does not add to operator depth.
 
+## Opening and downloading .mcl files
+
+- **Open .mcl** uses the browser's standard file picker. The file must be UTF-8;
+  invalid bytes are rejected, never replaced. A UTF-8 byte-order mark is removed
+  and CRLF/CR become LF. Files over 1 MB are refused; anything smaller loads in
+  full, and source over 5,000 characters loads too, with Compile reporting the limit.
+  Source with language errors loads normally; Compile reports the errors.
+- A canceled selection or a read error changes nothing: the editor, compilation,
+  Run availability, and output stay as they were. Choosing the same file again works.
+- A successful Open or Load Example replaces the source in one step, shows the new
+  name, clears the old compilation, output, and selections, and always requires
+  compiling again, even if the text is identical.
+- **Download .mcl** saves the editor text as UTF-8 with LF newlines, named after
+  the opened file (with a .mcl extension) or the example. The message says the
+  download *started*: the browser never tells the page whether the file was saved.
+  Downloading does not change the text, so a current compilation stays valid.
+
+## Unsaved work
+
+- The file bar compares the editor text with its baseline: the text of the last
+  Open or Load Example. "Unsaved changes" clears only when the text matches the
+  baseline again, after Open, Load Example, or an Undo back to it. A download
+  never clears it; it shows "Unsaved: download started, not confirmed" instead.
+- Before Open or Load Example would replace unsaved changes, a dialog offers
+  **Keep editing** (or Escape), **Download a copy**, or **Replace without
+  downloading**. Downloading a copy keeps the dialog open and the editor
+  unchanged until you choose to keep editing or replace.
+- Unsaved status and compilation validity are separate. Undo can clear the
+  unsaved difference while the compilation stays stale until you compile again.
+- While there are unsaved changes, the browser is asked to warn before reload or
+  close. This is best effort; browsers decide whether and how to show it.
+
+See [file-workflow.md](docs/file-workflow.md) for the state transitions and browser
+decisions, and [acceptance-checklist.md](docs/acceptance-checklist.md) for the
+manual checks.
+
 ## Data and verification
 
-Source, compilation results, and run output live in browser memory. Refreshing
-restores the default example; no source is sent to a server or persisted. The
-symbol table and instruction list never show runtime values: only Run produces output.
-File import/export, packaging, and the project report are later work.
+Source, compilation results, and run output live only in this tab's memory. The
+page stores nothing: no server, cookies, or browser storage. Reloading, closing
+the tab, or the browser discarding it loses unsaved work; only a downloaded file
+you saved keeps it. Refreshing restores the default example. The symbol table and
+instruction list never show runtime values: only Run produces output. The final
+report and release packaging are later work.
 
 GitHub Actions runs the test suite, TypeScript/production build, and Chromium
 workbench smoke tests on pull requests and pushes to main. Test outcomes are reported by CI; this README does not

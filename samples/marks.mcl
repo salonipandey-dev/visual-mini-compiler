@@ -1,0 +1,4 @@
+# Marks with a bonus
+let marks = 70;
+let bonus = 5;
+print marks + bonus;
