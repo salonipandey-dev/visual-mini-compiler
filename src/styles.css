@@ -32,6 +32,9 @@
   --gutter-bg: rgba(58, 3, 83, 0.22);
   --shadow-panel: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 12px 32px rgba(5, 1, 9, 0.5);
   --shadow-active: 0 4px 14px rgba(20, 2, 30, 0.45);
+  --shadow-dialog: 0 24px 60px rgba(5, 1, 9, 0.7), 0 0 0 1px rgba(128, 74, 138, 0.25);
+  --backdrop: rgba(10, 4, 15, 0.74);
+  --file-bar-bg: rgba(58, 3, 83, 0.14);
 
   /* text */
   --ink: #f7efe8; /* warm off-white */
@@ -1317,7 +1320,7 @@ kbd {
   gap: 6px 12px;
   padding: 8px 16px;
   border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  background: var(--file-bar-bg);
 }
 
 .file-name {
@@ -1338,16 +1341,36 @@ kbd {
   white-space: nowrap;
 }
 
+/* Save state is shown by label + icon + colour (icons have empty alt text). */
+.save-status::before {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  margin-right: 0.4em;
+}
+
 .save-clean {
   color: var(--ink-2);
   border: 1px solid var(--line);
 }
 
+.save-clean::before {
+  content: '\2713' / '';
+  color: var(--success);
+}
+
 .save-unsaved,
 .save-download-started {
-  color: var(--highlight);
-  background: var(--highlight-soft);
-  border: 1px solid rgba(214, 153, 90, 0.4);
+  color: var(--warning);
+  background: var(--warning-soft);
+  border: 1px solid var(--warning-line);
+}
+
+.save-unsaved::before {
+  content: '\25CF' / '';
+}
+
+.save-download-started::before {
+  content: '\26A0\FE0E' / '';
 }
 
 .file-actions {
@@ -1363,16 +1386,24 @@ kbd {
   border-radius: var(--radius);
   font-size: 13.5px;
   cursor: pointer;
+  transition: background-color var(--ease), border-color var(--ease), color var(--ease);
 }
 
 .btn-secondary {
   background: var(--raised);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   color: var(--ink);
 }
 
 .btn-secondary:hover {
+  background: var(--orchid-surface);
   border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-secondary:active,
+.btn-danger:active {
+  transform: translateY(1px);
 }
 
 .btn-danger {
@@ -1393,14 +1424,31 @@ kbd {
   border-bottom: 1px solid var(--line);
 }
 
+.file-notice::before {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  margin-right: 0.45em;
+}
+
 .notice-info {
   color: var(--ink-2);
-  background: var(--accent-tint);
+  background: var(--orchid-wash);
+  box-shadow: inset 3px 0 0 var(--orchid-ink);
+}
+
+.notice-info::before {
+  content: '\2139\FE0E' / '';
+  color: var(--orchid-ink);
 }
 
 .notice-error {
   color: var(--error);
   background: var(--error-tint);
+  box-shadow: inset 3px 0 0 var(--error);
+}
+
+.notice-error::before {
+  content: '\2715' / '';
 }
 
 /* ---------------- Replace dialog ---------------- */
@@ -1410,19 +1458,26 @@ kbd {
   padding: 20px 22px;
   background: var(--panel);
   color: var(--ink);
-  border: 1px solid var(--line);
-  border-top: 3px solid var(--highlight);
-  border-radius: var(--radius);
+  border: 1px solid var(--line-strong);
+  border-top: 3px solid var(--warning);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-dialog);
 }
 
 .replace-dialog::backdrop {
-  background: rgba(20, 13, 10, 0.72);
+  background: var(--backdrop);
 }
 
 .replace-dialog h2 {
   font-size: 17px;
   font-weight: 600;
   margin-bottom: 10px;
+}
+
+.replace-dialog h2::before {
+  content: '\26A0\FE0E' / '';
+  color: var(--warning);
+  margin-right: 0.45em;
 }
 
 .replace-dialog p {
@@ -1433,8 +1488,8 @@ kbd {
 
 .dialog-note {
   padding: 8px 10px;
-  border-left: 3px solid var(--highlight);
-  background: var(--highlight-soft);
+  border-left: 3px solid var(--warning);
+  background: var(--warning-soft);
   border-radius: var(--radius);
 }
 
