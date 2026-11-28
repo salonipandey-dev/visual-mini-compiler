@@ -1,0 +1,73 @@
+name: Publish website
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Compiler tests
+        run: npm test
+      - name: Build for the GitHub Pages repository path
+        run: npm run build -- --base=/visual-mini-compiler/
+      - name: Verify production asset paths
+        run: |
+          node --input-type=module <<'JS'
+          import { readFileSync, existsSync } from 'node:fs';
+          const html = readFileSync('dist/index.html', 'utf8');
+          const base = '/visual-mini-compiler/';
+          if (!html.includes(base + 'assets/')) throw new Error('Missing repository base path in the production build.');
+          for (const match of html.matchAll(/(?:src|href)="(\/[^\"]+)"/g)) {
+            if (!match[1].startsWith(base)) throw new Error('Asset outside repository base: ' + match[1]);
+            const path = 'dist/' + match[1].slice(base.length);
+            if (!existsSync(path)) throw new Error('Missing built asset: ' + path);
+          }
+          console.log('Production assets resolve under ' + base);
+          JS
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Browser smoke tests
+        run: npm run test:e2e
+      - name: Upload production website
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+          retention-days: 7
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check GitHub Pages configuration
+        uses: actions/configure-pages@v5
+      - name: Publish website
+        id: deployment
+        uses: actions/deploy-pages@v4
