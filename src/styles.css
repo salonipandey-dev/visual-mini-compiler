@@ -1,43 +1,99 @@
 /* ================================================================
    Visual Mini Compiler: workbench styles
-   Mocha theme: espresso base, latte = actions and focus,
-   caramel = "this came from here", pistachio = passed, raspberry = error
+   Purple and peach theme: deep purple base, layered plum panels,
+   orchid = active surfaces and keywords, peach = actions, focus and
+   selected indicators, orange = "this came from here",
+   mint = passed, rose = error. Every colour is defined in :root.
    ================================================================ */
 
 :root {
-  /* coffee browns */
-  --bg: #1d1512; /* espresso */
-  --panel: #271d18; /* dark roast */
-  --raised: #33261f; /* crema */
-  --line: #4a3a30; /* grounds */
-  --ink: #f2e8dc; /* steamed milk */
-  --ink-2: #c9b4a2; /* latte */
-  --ink-3: #9a8676; /* cocoa dust */
+  /* reference palette (exact values) */
+  --orchid: #804a8a; /* orchid purple */
+  --plum: #3a0353; /* deep plum */
+  --peach: #f8d299; /* soft peach */
+  --orange: #f59e51; /* warm orange */
 
-  /* primary action, focus, active tab */
-  --accent: #e8d2b0; /* foam */
-  --accent-fill: #dcbf96;
-  --accent-tint: rgba(232, 210, 176, 0.22);
-  --on-accent: #2a1a10;
+  /* surfaces: very dark purple foundation, solid plum panels */
+  --bg-deep: #0f0716;
+  --bg: #140a1d;
+  --bg-gradient:
+    radial-gradient(1100px 520px at 0% -8%, rgba(58, 3, 83, 0.6), transparent 62%),
+    radial-gradient(900px 480px at 100% -12%, rgba(128, 74, 138, 0.16), transparent 58%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  --panel: #1c0f28; /* editor and result panels */
+  --panel-head: #221230; /* opaque: sticky table headers */
+  --sunken: #160b21; /* code wells: editor, output, problem cards */
+  --raised: #281636; /* chips, inputs, hover */
+  --strip: linear-gradient(180deg, rgba(128, 74, 138, 0.13), rgba(128, 74, 138, 0.03));
+  --line: #3f2a4d; /* muted orchid border */
+  --line-soft: rgba(63, 42, 77, 0.7);
+  --line-strong: #5e406e;
+  --header-wash: linear-gradient(90deg, rgba(58, 3, 83, 0.55), rgba(58, 3, 83, 0) 70%);
+  --gutter-bg: rgba(58, 3, 83, 0.22);
+  --shadow-panel: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 12px 32px rgba(5, 1, 9, 0.5);
+  --shadow-active: 0 4px 14px rgba(20, 2, 30, 0.45);
+  --shadow-dialog: 0 24px 60px rgba(5, 1, 9, 0.7), 0 0 0 1px rgba(128, 74, 138, 0.25);
+  --backdrop: rgba(10, 4, 15, 0.74);
+  --file-bar-bg: rgba(58, 3, 83, 0.14);
 
-  /* "this came from here": token <-> source links, literals */
-  --highlight: #d6995a; /* caramel */
-  --highlight-tint: rgba(214, 153, 90, 0.3);
-  --highlight-soft: rgba(214, 153, 90, 0.12);
+  /* text */
+  --ink: #f7efe8; /* warm off-white */
+  --ink-2: #cdbbd9; /* lavender */
+  --ink-3: #a08db0; /* muted lavender */
+
+  /* orchid: active tab surface, keywords, statement opcodes */
+  --orchid-ink: #e3bcec;
+  --orchid-tint: rgba(128, 74, 138, 0.3);
+  --orchid-wash: rgba(128, 74, 138, 0.12);
+  --orchid-guide: rgba(128, 74, 138, 0.5);
+  --orchid-line: rgba(128, 74, 138, 0.6);
+  --orchid-surface: #3a2145;
+  --orchid-surface-hover: #472a54;
+  --active-surface: linear-gradient(180deg, rgba(128, 74, 138, 0.46), rgba(128, 74, 138, 0.26));
+
+  /* peach: primary action, focus, selected indicators, types, temporaries */
+  --accent: var(--peach);
+  --accent-gradient: linear-gradient(135deg, var(--peach) 0%, var(--orange) 100%);
+  --accent-gradient-hover: linear-gradient(135deg, #fbdeae 0%, #f7aa66 100%);
+  --accent-tint: rgba(248, 210, 153, 0.14);
+  --accent-line: rgba(248, 210, 153, 0.55);
+  --accent-line-soft: rgba(248, 210, 153, 0.3);
+  --brand-halo: 0 0 0 3px rgba(248, 210, 153, 0.12);
+  --shadow-accent: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 10px rgba(245, 158, 81, 0.18);
+  --shadow-accent-hover: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 4px 16px rgba(245, 158, 81, 0.3);
+  --on-accent: var(--plum);
+  --focus: var(--peach);
+
+  /* "this came from here": token <-> source links, literals, arithmetic */
+  --highlight: var(--orange);
+  --highlight-tint: rgba(245, 158, 81, 0.28);
+  --highlight-soft: rgba(245, 158, 81, 0.13);
+  --highlight-line: rgba(245, 158, 81, 0.32);
+  --row-selected: rgba(245, 158, 81, 0.18);
+
+  /* warning: stale results, partial output */
+  --warning: var(--orange);
+  --warning-soft: rgba(245, 158, 81, 0.11);
+  --warning-line: rgba(245, 158, 81, 0.4);
 
   /* phase passed */
-  --success: #a8c78a; /* pistachio */
-  --success-fill: #93b673;
-  --success-tint: rgba(168, 199, 138, 0.15);
-  --on-success: #1b2611;
+  --success: #7dd3a4; /* mint */
+  --success-fill: #5fc28e;
+  --success-tint: rgba(125, 211, 164, 0.14);
+  --success-line: rgba(125, 211, 164, 0.28);
+  --on-success: #0b2617;
 
   /* errors */
-  --error: #ec8580; /* raspberry */
-  --error-tint: rgba(236, 133, 128, 0.16);
-  --error-strong: rgba(236, 133, 128, 0.38);
-  --error-soft: rgba(236, 133, 128, 0.07);
+  --error: #ff8597; /* rose */
+  --error-tint: rgba(255, 133, 151, 0.16);
+  --error-strong: rgba(255, 133, 151, 0.36);
+  --error-soft: rgba(255, 133, 151, 0.08);
+  --error-line: rgba(255, 133, 151, 0.34);
 
+  --selection: rgba(128, 74, 138, 0.55);
   --radius: 6px;
+  --radius-panel: 12px;
+  --ease: 120ms ease-out;
 
   --font-ui: Bahnschrift, 'DIN Alternate', 'Segoe UI', system-ui, sans-serif;
   --font-code: 'Cascadia Mono', 'Cascadia Code', Consolas, 'SFMono-Regular', Menlo, monospace;
@@ -45,6 +101,7 @@
   --code-line: 22px; /* must match LINE_HEIGHT in SourceEditor.tsx */
 
   color-scheme: dark;
+  scrollbar-color: var(--line-strong) transparent;
 }
 
 *,
@@ -53,14 +110,28 @@
   box-sizing: border-box;
 }
 
+html {
+  background: var(--bg-deep);
+}
+
 html,
 body {
   margin: 0;
-  background: var(--bg);
   color: var(--ink);
   font-family: var(--font-ui);
   font-size: 15px;
   line-height: 1.5;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: var(--selection);
+  color: var(--ink);
 }
 
 h1,
@@ -77,7 +148,7 @@ select {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -101,10 +172,56 @@ kbd {
   font-family: var(--font-ui);
   font-size: 12px;
   padding: 0 5px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 3px;
   background: var(--raised);
+  box-shadow: inset 0 -1px 0 var(--line);
   color: var(--ink-2);
+}
+
+/* ---------------- Status icons ----------------
+   Decorative glyphs with empty alternative text, so a status is shown by
+   label + icon + colour, and screen readers read the same text as before. */
+
+.count::before,
+.stale-banner::before,
+.banner-error::before,
+.banner-success::before,
+.banner-info::before,
+.output-status::before,
+.output-subheading::before,
+.problem-where::before,
+.message-error h3::before {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  margin-right: 0.45em;
+}
+
+.count::before,
+.banner-success::before,
+.output-status.status-success::before {
+  content: '\2713' / '';
+  color: var(--success);
+}
+
+.count-error::before,
+.banner-error::before,
+.output-status.status-error::before,
+.problem-where::before,
+.message-error h3::before {
+  content: '\2715' / '';
+  color: var(--error);
+}
+
+.stale-banner::before,
+.output-subheading::before {
+  content: '\26A0\FE0E' / '';
+  color: var(--warning);
+}
+
+.banner-info::before {
+  content: '\2139\FE0E' / '';
+  color: var(--orchid-ink);
 }
 
 /* ---------------- App shell ---------------- */
@@ -123,12 +240,25 @@ kbd {
   gap: 16px;
   padding: 12px 20px;
   border-bottom: 1px solid var(--line);
+  background: var(--header-wash);
 }
 
 .app-header h1 {
   font-size: 18px;
   font-weight: 600;
   letter-spacing: 0.01em;
+}
+
+/* Brand mark: decorative, empty content. */
+.app-header h1::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 10px;
+  border-radius: 3px;
+  background: var(--accent-gradient);
+  box-shadow: var(--brand-halo);
 }
 
 .run-info {
@@ -140,9 +270,10 @@ kbd {
 .stale-banner {
   padding: 8px 20px;
   font-size: 14px;
-  color: var(--highlight);
-  background: var(--highlight-soft);
-  border-bottom: 1px solid rgba(214, 153, 90, 0.35);
+  color: var(--ink);
+  background: var(--warning-soft);
+  border-bottom: 1px solid var(--warning-line);
+  box-shadow: inset 3px 0 0 var(--warning);
 }
 
 .workbench {
@@ -150,6 +281,8 @@ kbd {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 12px;
+  padding: 12px;
 }
 
 .pane {
@@ -157,10 +290,10 @@ kbd {
   flex-direction: column;
   min-height: 0;
   min-width: 0;
-}
-
-.pane-source {
-  border-right: 1px solid var(--line);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-panel);
 }
 
 .pane-results.is-stale .phase-panel {
@@ -183,6 +316,8 @@ kbd {
   gap: 10px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--line);
+  border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+  background: var(--strip);
 }
 
 .pane-toolbar .panel-heading {
@@ -198,10 +333,18 @@ kbd {
   font-size: 14px;
   max-width: 230px;
   cursor: pointer;
+  transition: border-color var(--ease), background-color var(--ease);
 }
 
 .example-picker select:hover {
-  border-color: var(--ink-3);
+  border-color: var(--line-strong);
+  background: var(--orchid-surface);
+}
+
+.example-picker option,
+.example-picker optgroup {
+  background: var(--panel);
+  color: var(--ink);
 }
 
 .btn-compile {
@@ -209,14 +352,17 @@ kbd {
   padding: 0 18px;
   border: 0;
   border-radius: var(--radius);
-  background: var(--accent-fill);
+  background: var(--accent-gradient);
   color: var(--on-accent);
   font-weight: 600;
   cursor: pointer;
+  box-shadow: var(--shadow-accent);
+  transition: box-shadow var(--ease);
 }
 
 .btn-compile:hover {
-  background: var(--accent);
+  background: var(--accent-gradient-hover);
+  box-shadow: var(--shadow-accent-hover);
 }
 
 .btn-compile:active {
@@ -236,12 +382,12 @@ kbd {
   flex: 1;
   min-height: 0;
   display: flex;
-  background: var(--panel);
+  background: var(--sunken);
   border-bottom: 1px solid var(--line);
 }
 
 .editor-frame:focus-within {
-  box-shadow: inset 2px 0 0 var(--accent);
+  box-shadow: inset 2px 0 0 var(--focus);
 }
 
 .editor-gutter {
@@ -250,6 +396,7 @@ kbd {
   overflow: hidden;
   padding: 12px 0 40px;
   border-right: 1px solid var(--line);
+  background: var(--gutter-bg);
   font-family: var(--font-code);
   font-size: 13px;
   line-height: var(--code-line);
@@ -267,6 +414,7 @@ kbd {
 .gutter-line.has-error {
   color: var(--error);
   font-weight: 600;
+  background: var(--error-soft);
 }
 
 .gutter-line.has-error::before {
@@ -328,7 +476,7 @@ kbd {
 }
 
 .editor-input::selection {
-  background: rgba(232, 210, 176, 0.3);
+  background: var(--selection);
 }
 
 .hl {
@@ -392,16 +540,22 @@ kbd {
   font-size: 12px;
   font-weight: 600;
   min-width: 22px;
-  padding: 1px 7px;
+  padding: 1px 8px;
   border-radius: 10px;
   text-align: center;
   background: var(--success-tint);
   color: var(--success);
+  border: 1px solid var(--success-line);
+}
+
+.count::before {
+  margin-right: 0.35em;
 }
 
 .count-error {
   background: var(--error-tint);
   color: var(--error);
+  border-color: var(--error-line);
 }
 
 .problems-empty {
@@ -425,15 +579,18 @@ kbd {
   gap: 2px 12px;
   padding: 8px 12px;
   text-align: left;
-  background: var(--panel);
+  background: var(--sunken);
   border: 1px solid var(--line);
   border-left: 3px solid var(--error);
   border-radius: var(--radius);
   cursor: pointer;
+  transition: background-color var(--ease), border-color var(--ease);
 }
 
 .problem:hover:not(:disabled) {
   background: var(--raised);
+  border-color: var(--line-strong);
+  border-left-color: var(--error);
 }
 
 .problem:disabled {
@@ -472,10 +629,13 @@ kbd {
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid var(--line);
+  border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+  background: var(--strip);
   overflow-x: auto;
 }
 
 .stage {
+  position: relative;
   flex: none;
   display: flex;
   align-items: center;
@@ -486,15 +646,34 @@ kbd {
   border-radius: 999px;
   text-align: left;
   cursor: pointer;
+  transition: background-color var(--ease), border-color var(--ease);
 }
 
 .stage:hover {
-  background: var(--panel);
-}
-
-.stage.is-active {
   background: var(--raised);
   border-color: var(--line);
+}
+
+/* Active tab: orchid surface, peach title and peach indicator bar. */
+.stage.is-active {
+  background: var(--active-surface);
+  border-color: var(--orchid);
+  box-shadow: var(--shadow-active);
+}
+
+.stage.is-active:hover {
+  background: var(--orchid-surface-hover);
+}
+
+.stage.is-active::after {
+  content: '';
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: -6px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--accent);
 }
 
 .stage-node {
@@ -564,7 +743,7 @@ kbd {
   min-width: 18px;
   height: 0;
   margin: 0 4px;
-  border-top: 2px dashed var(--line);
+  border-top: 2px dashed var(--line-strong);
 }
 
 .pipe-flow {
@@ -572,7 +751,7 @@ kbd {
 }
 
 .pipe-blocked {
-  border-top: 2px dashed var(--line);
+  border-top: 2px dashed var(--line-strong);
   position: relative;
 }
 
@@ -655,7 +834,8 @@ kbd {
 
 .tok {
   display: inline-block;
-  padding: 1px 7px;
+  padding: 0 7px;
+  border: 1px solid var(--line);
   border-radius: 4px;
   font-family: var(--font-code);
   font-size: 12px;
@@ -671,8 +851,9 @@ kbd {
 }
 
 .tok-KEYWORD {
-  color: var(--success);
-  background: var(--success-tint);
+  color: var(--orchid-ink);
+  background: var(--orchid-tint);
+  border-color: var(--orchid-line);
 }
 
 .tok-INT_LITERAL,
@@ -680,6 +861,7 @@ kbd {
 .tok-BOOL_LITERAL {
   color: var(--highlight);
   background: var(--highlight-soft);
+  border-color: var(--highlight-line);
 }
 
 .tok-OPERATOR,
@@ -690,12 +872,13 @@ kbd {
 .tok-ERROR {
   color: var(--error);
   background: var(--error-tint);
+  border-color: var(--error-line);
 }
 
 .tok-EOF {
   color: var(--ink-3);
   background: transparent;
-  border: 1px dashed var(--line);
+  border: 1px dashed var(--line-strong);
 }
 
 .table-scroll {
@@ -716,10 +899,11 @@ kbd {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--bg);
+  background: var(--panel-head);
   text-align: left;
   font-weight: 600;
   font-size: 13px;
+  letter-spacing: 0.02em;
   color: var(--ink-2);
   padding: 8px 12px;
   border-bottom: 1px solid var(--line);
@@ -727,7 +911,12 @@ kbd {
 
 .token-table td {
   padding: 3px 12px;
-  border-bottom: 1px solid rgba(74, 58, 48, 0.6);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* Zero specificity, so error and selected rows always win over hover. */
+:where(.token-table tbody tr:hover) td {
+  background: var(--orchid-wash);
 }
 
 .token-table .col-type {
@@ -749,11 +938,15 @@ kbd {
 }
 
 .row-selected td {
-  background: var(--highlight-tint);
+  background: var(--row-selected);
 }
 
 .row-selected td:first-child {
   box-shadow: inset 3px 0 0 var(--highlight);
+}
+
+.row-selected .muted {
+  color: var(--ink-2); /* keeps the row number readable on the orange tint */
 }
 
 .lexeme {
@@ -776,6 +969,11 @@ kbd {
 
 .lexeme:hover:not(:disabled) {
   border-color: var(--highlight);
+  background: var(--sunken);
+}
+
+.lexeme[aria-pressed='true'] {
+  border-color: var(--highlight);
 }
 
 /* ---------------- Small screens: stack the panes ---------------- */
@@ -786,10 +984,6 @@ kbd {
   }
   .workbench {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .pane-source {
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
   }
   .editor {
     height: 360px;
@@ -810,6 +1004,20 @@ kbd {
   .app-header {
     flex-direction: column;
     gap: 2px;
+  }
+  /* Full-width panes on phones, so tables keep the original width. */
+  .workbench {
+    gap: 8px;
+    padding: 8px 0 0;
+  }
+  .pane {
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+  }
+  .pane-toolbar,
+  .pipeline {
+    border-radius: 0;
   }
   .pane-toolbar {
     flex-wrap: wrap;
@@ -835,6 +1043,11 @@ kbd {
     gap: 6px;
     padding: 4px 6px 4px 4px;
   }
+  .stage.is-active::after {
+    left: 12px;
+    right: 12px;
+    bottom: -5px;
+  }
   .stage-node {
     width: 24px;
     height: 24px;
@@ -858,11 +1071,13 @@ kbd {
   }
 }
 
-/* Syntax tree: uses the existing mocha palette. */
+/* ---------------- Syntax tree ---------------- */
 .syntax { padding: 16px; overflow: auto; min-height: 0; }
 .ast-description { color: var(--ink-2); margin-bottom: 16px; }
-.ast-node { margin: 8px 0; border-left: 1px solid var(--line); padding-left: 12px; }
-.ast-node summary { cursor: pointer; padding: 4px 0; }
+.ast-node { margin: 8px 0; border-left: 1px solid var(--orchid-guide); padding-left: 12px; }
+.ast-node summary { cursor: pointer; padding: 4px 6px; margin-left: -6px; border-radius: 4px; }
+.ast-node summary::marker { color: var(--orchid-ink); }
+.ast-node summary:hover { background: var(--orchid-wash); }
 .ast-label { color: var(--ink); font-family: var(--font-code); }
 .ast-position { color: var(--ink-3); font-size: 12px; margin-left: 12px; }
 .ast-child { margin-left: 16px; }
@@ -903,6 +1118,7 @@ kbd {
 .tok-TYPE {
   color: var(--accent);
   background: var(--accent-tint);
+  border-color: var(--accent-line-soft);
 }
 
 /* ---------------- Intermediate code view ---------------- */
@@ -915,8 +1131,8 @@ kbd {
 }
 
 .banner-info {
-  background: var(--accent-tint);
-  border-left: 3px solid var(--accent);
+  background: var(--orchid-tint);
+  border-left: 3px solid var(--orchid-ink);
 }
 
 .lexeme.instruction {
@@ -944,13 +1160,15 @@ kbd {
 }
 
 .ir-keyword {
-  color: var(--success);
+  color: var(--orchid-ink);
+  font-weight: 600;
 }
 
 .tok-op-COPY,
 .tok-op-PRINT {
-  color: var(--success);
-  background: var(--success-tint);
+  color: var(--orchid-ink);
+  background: var(--orchid-tint);
+  border-color: var(--orchid-line);
 }
 
 .tok-op-ADD,
@@ -959,6 +1177,7 @@ kbd {
 .tok-op-NEG {
   color: var(--highlight);
   background: var(--highlight-soft);
+  border-color: var(--highlight-line);
 }
 
 /* Four phase tabs: use the short titles whenever the results pane is narrow. */
@@ -980,21 +1199,27 @@ kbd {
 .btn-run {
   height: 34px;
   padding: 0 18px;
-  border: 1px solid var(--success);
+  border: 1px solid var(--accent-line);
   border-radius: var(--radius);
-  background: var(--success-tint);
-  color: var(--success);
+  background: var(--orchid-surface);
+  color: var(--accent);
   font-weight: 600;
   cursor: pointer;
+  transition: background-color var(--ease), border-color var(--ease);
 }
 
 .btn-run:hover:not(:disabled) {
-  background: var(--success-fill);
-  color: var(--on-success);
+  background: var(--orchid-surface-hover);
+  border-color: var(--accent);
+}
+
+.btn-run:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .btn-run:disabled {
   border-color: var(--line);
+  border-style: dashed;
   background: transparent;
   color: var(--ink-3);
   cursor: not-allowed;
@@ -1027,7 +1252,7 @@ kbd {
 .output-text {
   margin: 8px 0 0;
   padding: 10px 12px;
-  background: var(--bg);
+  background: var(--sunken);
   border: 1px solid var(--line);
   border-left: 3px solid var(--success);
   border-radius: var(--radius);
@@ -1040,20 +1265,20 @@ kbd {
 }
 
 .output-text.is-partial {
-  border-left-color: var(--highlight);
+  border-left-color: var(--warning);
 }
 
 .output-subheading {
   margin-top: 12px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--highlight);
+  color: var(--warning);
 }
 
 .runtime-diagnostic {
   margin-top: 8px;
   padding: 8px 12px;
-  background: var(--panel);
+  background: var(--sunken);
   border: 1px solid var(--line);
   border-left: 3px solid var(--error);
   border-radius: var(--radius);
@@ -1070,6 +1295,11 @@ kbd {
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
+}
+
+.btn-link:hover {
+  color: var(--highlight);
+  text-decoration-thickness: 2px;
 }
 
 .internal-error {
@@ -1090,7 +1320,7 @@ kbd {
   gap: 6px 12px;
   padding: 8px 16px;
   border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  background: var(--file-bar-bg);
 }
 
 .file-name {
@@ -1111,16 +1341,36 @@ kbd {
   white-space: nowrap;
 }
 
+/* Save state is shown by label + icon + colour (icons have empty alt text). */
+.save-status::before {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  margin-right: 0.4em;
+}
+
 .save-clean {
   color: var(--ink-2);
   border: 1px solid var(--line);
 }
 
+.save-clean::before {
+  content: '\2713' / '';
+  color: var(--success);
+}
+
 .save-unsaved,
 .save-download-started {
-  color: var(--highlight);
-  background: var(--highlight-soft);
-  border: 1px solid rgba(214, 153, 90, 0.4);
+  color: var(--warning);
+  background: var(--warning-soft);
+  border: 1px solid var(--warning-line);
+}
+
+.save-unsaved::before {
+  content: '\25CF' / '';
+}
+
+.save-download-started::before {
+  content: '\26A0\FE0E' / '';
 }
 
 .file-actions {
@@ -1136,16 +1386,24 @@ kbd {
   border-radius: var(--radius);
   font-size: 13.5px;
   cursor: pointer;
+  transition: background-color var(--ease), border-color var(--ease), color var(--ease);
 }
 
 .btn-secondary {
   background: var(--raised);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   color: var(--ink);
 }
 
 .btn-secondary:hover {
+  background: var(--orchid-surface);
   border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-secondary:active,
+.btn-danger:active {
+  transform: translateY(1px);
 }
 
 .btn-danger {
@@ -1166,14 +1424,31 @@ kbd {
   border-bottom: 1px solid var(--line);
 }
 
+.file-notice::before {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  margin-right: 0.45em;
+}
+
 .notice-info {
   color: var(--ink-2);
-  background: var(--accent-tint);
+  background: var(--orchid-wash);
+  box-shadow: inset 3px 0 0 var(--orchid-ink);
+}
+
+.notice-info::before {
+  content: '\2139\FE0E' / '';
+  color: var(--orchid-ink);
 }
 
 .notice-error {
   color: var(--error);
   background: var(--error-tint);
+  box-shadow: inset 3px 0 0 var(--error);
+}
+
+.notice-error::before {
+  content: '\2715' / '';
 }
 
 /* ---------------- Replace dialog ---------------- */
@@ -1183,19 +1458,26 @@ kbd {
   padding: 20px 22px;
   background: var(--panel);
   color: var(--ink);
-  border: 1px solid var(--line);
-  border-top: 3px solid var(--highlight);
-  border-radius: var(--radius);
+  border: 1px solid var(--line-strong);
+  border-top: 3px solid var(--warning);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-dialog);
 }
 
 .replace-dialog::backdrop {
-  background: rgba(20, 13, 10, 0.72);
+  background: var(--backdrop);
 }
 
 .replace-dialog h2 {
   font-size: 17px;
   font-weight: 600;
   margin-bottom: 10px;
+}
+
+.replace-dialog h2::before {
+  content: '\26A0\FE0E' / '';
+  color: var(--warning);
+  margin-right: 0.45em;
 }
 
 .replace-dialog p {
@@ -1206,8 +1488,8 @@ kbd {
 
 .dialog-note {
   padding: 8px 10px;
-  border-left: 3px solid var(--highlight);
-  background: var(--highlight-soft);
+  border-left: 3px solid var(--warning);
+  background: var(--warning-soft);
   border-radius: var(--radius);
 }
 
