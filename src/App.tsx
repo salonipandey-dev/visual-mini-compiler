@@ -8,12 +8,23 @@
  * compilation, and only when that compilation succeeded AND was made from the
  * editor's current revision (so an edit, even followed by Undo, requires recompiling).
  *
- * All state lives in memory. Nothing is saved or sent anywhere; refreshing the
- * page restores the default example and clears the results.
+ * Source text lives in a SourceDocument (src/files): its revision decides whether a
+ * compilation is current; its baseline decides whether there are unsaved changes.
+ * Open and Load Example replace the document atomically, after any unsaved-work
+ * decision. Download hands the text to the browser and never counts as a save.
+ *
+ * All state lives in memory. Nothing is sent anywhere or stored by the page;
+ * refreshing restores the default example (after a best-effort unsaved warning).
  */
-import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { compile, normalizeSource, PHASES, type CompileResult, type Diagnostic, type PhaseId } from './compiler';
-import { DEFAULT_EXAMPLE, EXAMPLES } from './examples/examples';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import { compile, PHASES, type CompileResult, type Diagnostic, type PhaseId } from './compiler';
+import { DEFAULT_EXAMPLE, EXAMPLES, type Example } from './examples/examples';
+import {
+  cleanFileName, createDocument, documentLabel, editDocument, hasUnsavedChanges, LatestRequest,
+  noteDownloadStarted, readSourceFile, replaceDocument, saveStatus, startDownload, suggestedFileName,
+  type SourceOrigin,
+} from './files';
+import { ReplaceDialog } from './ui/ReplaceDialog';
 import { execute, runnableProgram, type ExecutionResult } from './runtime';
 import { LexicalView } from './ui/LexicalView';
 import { OutputPanel, type OutputState } from './ui/OutputPanel';
@@ -38,9 +49,28 @@ type Execution =
   | { kind: 'ran'; compilation: number; run: number; result: ExecutionResult }
   | { kind: 'internal-error'; compilation: number; run: number };
 
+/** Text that Open or Load Example wants to put in the editor. */
+interface Replacement {
+  origin: SourceOrigin;
+  text: string;
+  /** For messages: "Opening scores.mcl" or "Loading the example ..." */
+  action: string;
+}
+
+/** A replacement waiting for the user's decision about unsaved changes. */
+interface PendingReplacement {
+  replacement: Replacement;
+  downloadedName: string | null;
+}
+
+type FileNotice = { kind: 'info' | 'error'; message: string };
+
+const exampleOrigin = (example: Example): SourceOrigin => ({ kind: 'example', exampleId: example.id, title: example.title });
+
 export default function App() {
-  const [source, setSource] = useState(DEFAULT_EXAMPLE.source);
-  const [sourceRevision, setSourceRevision] = useState(0);
+  const [doc, setDoc] = useState(() => createDocument(DEFAULT_EXAMPLE.source, exampleOrigin(DEFAULT_EXAMPLE)));
+  const [pending, setPending] = useState<PendingReplacement | null>(null);
+  const [fileNotice, setFileNotice] = useState<FileNotice | null>(null);
   const [compilation, setCompilation] = useState<Compilation | null>(null);
   const [activePhase, setActivePhase] = useState<PhaseId>('lexical');
   const [picked, setPicked] = useState<Highlight | null>(null); // token or problem the user selected
@@ -50,7 +80,29 @@ export default function App() {
   const [execution, setExecution] = useState<Execution | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const editorRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const compileCounter = useRef(0);
+  const reads = useRef(new LatestRequest());
+  // File reads finish asynchronously: they must compare against the document as it is THEN.
+  const docRef = useRef(doc);
+  useEffect(() => {
+    docRef.current = doc;
+  }, [doc]);
+
+  const source = doc.text;
+  const sourceRevision = doc.revision;
+  const unsaved = hasUnsavedChanges(doc);
+
+  // Best-effort warning before reload or close while there are unsaved changes.
+  useEffect(() => {
+    if (!unsaved) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = ''; // older browsers need this to show the prompt
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [unsaved]);
 
   const result = compilation?.result ?? null;
   // Any edit invalidates results, including an edit followed by Undo.
@@ -59,8 +111,7 @@ export default function App() {
   const runnable = compilation !== null && !stale ? runnableProgram(compilation.result) : null;
 
   function changeSource(value: string) {
-    setSource(normalizeSource(value));
-    setSourceRevision((revision) => revision + 1);
+    setDoc((current) => editDocument(current, value)); // normalizes newlines, revision + 1
     setExecution(null); // output belonged to the old text
     clearPicks();
   }
@@ -113,11 +164,88 @@ export default function App() {
   function loadExample(id: string) {
     const example = EXAMPLES.find((e) => e.id === id);
     if (!example) return;
-    changeSource(example.source);
-    setCompilation(null); // old results belong to different source text
+    requestReplacement({
+      origin: exampleOrigin(example),
+      text: example.source,
+      action: `Loading the example "${example.title}"`,
+    });
+  }
+
+  /** Replace now if nothing would be lost; otherwise ask first. */
+  function requestReplacement(replacement: Replacement) {
+    if (hasUnsavedChanges(docRef.current)) {
+      setPending({ replacement, downloadedName: null });
+      return;
+    }
+    applyReplacement(replacement);
+  }
+
+  /** Swap in new source atomically and invalidate everything that belonged to the old text. */
+  function applyReplacement({ origin, text }: Replacement) {
+    reads.current.invalidate(); // a read still in flight must not overwrite this
+    setDoc((current) => replaceDocument(current, text, origin)); // revision + 1 even for identical text
+    setPending(null);
+    setCompilation(null);
+    setExecution(null);
     clearPicks();
     setActivePhase('lexical');
-    setAnnouncement(`Loaded example: ${example.title}. Press Compile to analyze it.`);
+    setFileNotice(null);
+    setAnnouncement(
+      origin.kind === 'file'
+        ? `Opened ${origin.fileName}. Press Compile to analyze it.`
+        : `Loaded example: ${origin.title}. Press Compile to analyze it.`,
+    );
+    editorRef.current?.focus();
+  }
+
+  function onFileChosen(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = ''; // so choosing the same file again still fires a change event
+    if (!file) return; // selection canceled: nothing changes
+
+    const ticket = reads.current.begin(); // any older read is now stale
+    const name = cleanFileName(file.name);
+    setFileNotice({ kind: 'info', message: `Opening ${name}…` });
+    readSourceFile(file)
+      .then((outcome) => {
+        if (!reads.current.isCurrent(ticket)) return; // superseded by a newer Open or a load
+        if (!outcome.ok) {
+          setFileNotice({ kind: 'error', message: outcome.message });
+          setAnnouncement(outcome.message);
+          return; // editor, compilation, and output are untouched
+        }
+        setFileNotice(null);
+        requestReplacement({ origin: { kind: 'file', fileName: outcome.fileName }, text: outcome.text, action: `Opening ${outcome.fileName}` });
+      })
+      .catch((error: unknown) => {
+        if (!reads.current.isCurrent(ticket)) return;
+        reportInternalError('opening a file', error);
+        setFileNotice({ kind: 'error', message: `Could not open ${name} because of an internal error. The editor was not changed.` });
+      });
+  }
+
+  /** Offer the current text as a download. Changes nothing else: not the text, revision, or baseline. */
+  function downloadSource(): string | null {
+    const current = docRef.current;
+    const fileName = suggestedFileName(current);
+    try {
+      startDownload(current.text, fileName);
+    } catch (error) {
+      reportInternalError('starting a download', error);
+      setFileNotice({ kind: 'error', message: 'The browser could not start the download. The editor was not changed.' });
+      return null;
+    }
+    setDoc((latest) => noteDownloadStarted(latest, fileName, Date.now()));
+    const message = `Download of ${fileName} started. Your browser decides where it is saved; this page cannot confirm that the file was written.`;
+    setFileNotice({ kind: 'info', message });
+    setAnnouncement(message);
+    return fileName;
+  }
+
+  function keepEditing() {
+    setPending(null);
+    setAnnouncement('Kept the current source. Nothing was replaced.');
     editorRef.current?.focus();
   }
 
@@ -268,6 +396,36 @@ export default function App() {
             </button>
           </div>
 
+          <div className="file-bar">
+            <span className="file-name" title={documentLabel(doc)}>
+              {documentLabel(doc)}
+            </span>
+            <span className={`save-status save-${saveStatus(doc)}`} data-testid="save-status">
+              {SAVE_STATUS_TEXT[saveStatus(doc)]}
+            </span>
+            <span className="file-actions">
+              <button type="button" className="btn-secondary" onClick={() => fileInputRef.current?.click()}>
+                Open .mcl
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => downloadSource()}>
+                Download .mcl
+              </button>
+            </span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".mcl,text/plain"
+              hidden
+              onChange={onFileChosen}
+              aria-label="Choose a .mcl file to open"
+            />
+          </div>
+          {fileNotice && (
+            <p className={`file-notice notice-${fileNotice.kind}`} role={fileNotice.kind === 'error' ? 'alert' : 'status'}>
+              {fileNotice.message}
+            </p>
+          )}
+
           <SourceEditor
             value={source}
             onChange={changeSource}
@@ -296,6 +454,25 @@ export default function App() {
       <p className="sr-only" aria-live="polite">
         {announcement}
       </p>
+
+      {pending && (
+        <ReplaceDialog
+          currentLabel={documentLabel(doc)}
+          action={pending.replacement.action}
+          earlierDownload={
+            doc.lastDownload && doc.lastDownload.text === doc.text
+              ? { fileName: doc.lastDownload.fileName, time: new Date(doc.lastDownload.startedAt).toLocaleTimeString() }
+              : null
+          }
+          downloadedName={pending.downloadedName}
+          onKeep={keepEditing}
+          onDownload={() => {
+            const fileName = downloadSource();
+            if (fileName) setPending((current) => current && { ...current, downloadedName: fileName });
+          }}
+          onReplace={() => applyReplacement(pending.replacement)}
+        />
+      )}
     </div>
   );
 
@@ -381,6 +558,12 @@ export default function App() {
     );
   }
 }
+
+const SAVE_STATUS_TEXT = {
+  clean: 'No unsaved changes',
+  unsaved: 'Unsaved changes',
+  'download-started': 'Unsaved: download started, not confirmed',
+} as const;
 
 /** Compile diagnostics plus, when the last run failed, its runtime diagnostic. */
 function allDiagnostics(result: CompileResult, execution: Execution | null): readonly Diagnostic[] {
