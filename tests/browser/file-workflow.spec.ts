@@ -239,9 +239,8 @@ test('Undo clears the unsaved difference but the compilation stays stale', async
   await expect(page.locator('.stale-banner')).toBeVisible();
 });
 
-test('a slow older read cannot overwrite a newer file selection or newer edits', async ({ page }) => {
-  await page.goto('/');
-  // Make reads of files named slow*.mcl take 700 ms.
+/** Make reads of files whose names start with "slow" take 700 ms. */
+async function makeSlowReads(page: Page) {
   await page.evaluate(() => {
     const original = Blob.prototype.arrayBuffer;
     Blob.prototype.arrayBuffer = function (this: Blob) {
@@ -249,6 +248,11 @@ test('a slow older read cannot overwrite a newer file selection or newer edits',
       return new Promise<void>((resolve) => setTimeout(resolve, slow ? 700 : 0)).then(() => original.call(this));
     };
   });
+}
+
+test('a slow older read cannot overwrite a newer file selection or newer edits', async ({ page }) => {
+  await page.goto('/');
+  await makeSlowReads(page);
 
   // Newer selection wins.
   await openFile(page, 'slow.mcl', 'print 1;\n');
@@ -291,4 +295,23 @@ test('warns before leaving with unsaved changes, and not when clean', async ({ p
   await clean.close({ runBeforeUnload: true });
   await closed;
   expect(dialogs).toEqual([]);
+});
+
+test('choosing an example while an older file read is in progress keeps the example decision', async ({ page }) => {
+  await page.goto('/');
+  await makeSlowReads(page);
+  await editor(page).press('Control+End');
+  await page.keyboard.type('print 9;'); // unsaved edits, so the example will ask first
+  await openFile(page, 'slow.mcl', 'print 1;\n'); // still being read
+  await page.locator('.example-picker select').selectOption('precedence'); // the newer request
+  await expect(dialog(page)).toContainText('Loading the example "Precedence and parentheses"');
+
+  await page.waitForTimeout(1000); // the older read has now finished
+  await expect(dialog(page)).toContainText('Loading the example "Precedence and parentheses"');
+  await expect(dialog(page)).not.toContainText('slow.mcl');
+  await dialog(page).getByRole('button', { name: 'Replace without downloading' }).click();
+  await expect(fileName(page)).toHaveText('Untitled (example: Precedence and parentheses)');
+  await expect(editor(page)).not.toHaveValue('print 1;\n');
+  await page.waitForTimeout(300);
+  await expect(dialog(page)).toHaveCount(0);
 });
