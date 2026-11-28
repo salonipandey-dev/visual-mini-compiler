@@ -90,9 +90,10 @@ availability, and output all stay as they were. Only a message is shown.
 ### Reads that finish late
 
 Reading is asynchronous. Each Open takes a ticket from LatestRequest. Starting
-another Open, or applying any replacement such as Load Example, makes older
-tickets stale. A read whose ticket is stale is ignored when it finishes, so a
-slow older file can never replace a newer one.
+another Open, choosing an example (even if the example then waits in the Replace
+dialog, or you keep editing), or applying any replacement makes older tickets
+stale. A read whose ticket is stale is ignored when it finishes, so a slow older
+file can never replace a newer choice or change a pending decision.
 
 If you type while a file is being read, the read still finishes. But the
 document now has unsaved edits, so the Replace dialog asks before anything is

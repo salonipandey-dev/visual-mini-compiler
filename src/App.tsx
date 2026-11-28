@@ -164,6 +164,9 @@ export default function App() {
   function loadExample(id: string) {
     const example = EXAMPLES.find((e) => e.id === id);
     if (!example) return;
+    // Choosing an example is a newer request: a file still being read must not replace it later,
+    // even while this example waits in the replace dialog (or is then kept-editing away).
+    reads.current.invalidate();
     requestReplacement({
       origin: exampleOrigin(example),
       text: example.source,

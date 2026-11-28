@@ -25,6 +25,7 @@ Statuses record only checks actually performed.
 | 14 | Downloading unchanged source keeps Run available | download-unchanged test | Automated |
 | 15 | Undo clears "Unsaved changes" but Run stays disabled | Undo test | Automated |
 | 16 | A slow older read cannot overwrite a newer selection or newer edits | slow-read test | Automated |
+| 16a | Choosing an example while a file is still being read keeps the example's replace decision | late-read regression test | Automated |
 | 17 | Reload/close warns only while there are unsaved changes | beforeunload test | Automated |
 | 18 | On Windows, the downloaded .mcl file appears in Downloads with the expected name and contents | Chrome or Edge on Windows; open the file in Notepad | Pending |
 | 19 | Canceling the browser's save dialog (if "Ask where to save" is on) leaves the status "Unsaved: download started, not confirmed" | Chrome setting: Ask where to save each file | Pending |
