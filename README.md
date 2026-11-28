@@ -159,3 +159,21 @@ File import/export, packaging, and the project report are later work.
 GitHub Actions runs the test suite, TypeScript/production build, and Chromium
 workbench smoke tests on pull requests and pushes to main. Test outcomes are reported by CI; this README does not
 claim verification beyond what CI reports.
+
+## GitHub Pages deployment
+
+The Publish website workflow tests the compiler, builds the static application
+for `/visual-mini-compiler/`, verifies production asset paths, and runs the Chromium
+checks before uploading the site. Pull requests build and test without publishing.
+Pushes to main and manual runs on main publish after those checks pass.
+
+One-time repository setup: open Settings > Pages and select **GitHub Actions**
+under Build and deployment > Source. The workflow cannot enable Pages itself.
+If an earlier deployment failed because Pages was disabled, re-run its failed job
+after enabling the setting, or run Publish website manually on main.
+
+Expected address after a successful deployment:
+https://salonipandey-dev.github.io/visual-mini-compiler/
+
+Only a successful deployment confirms that this address is live. The source and
+compiler run locally in the visitor's browser; hosting serves the static application.
