@@ -124,8 +124,9 @@ See the [language specification](docs/language-spec.md), the
 | tests/ | Lexer, parser, semantic, code generation, runner, pipeline, and rendering tests |
 | tests/browser/ | Chromium workbench tests (Playwright) |
 
-The compiler core and the runtime import neither React nor the DOM; the compiler never imports the runtime. The workbench uses the
-existing mocha palette. Source edits invalidate the previous results by revision,
+The compiler core and the runtime import neither React nor the DOM; the compiler never imports the runtime. The workbench uses a dark
+purple and peach theme whose colours are defined once as CSS custom properties at the
+top of src/styles.css. Source edits invalidate the previous results by revision,
 including an edit followed by Undo. Stale results are labeled and their source
 navigation/highlights are disabled.
 
